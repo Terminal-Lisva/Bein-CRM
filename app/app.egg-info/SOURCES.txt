@@ -1,0 +1,13 @@
+setup.py
+app.egg-info/PKG-INFO
+app.egg-info/SOURCES.txt
+app.egg-info/dependency_links.txt
+app.egg-info/top_level.txt
+main_objects/__init__.py
+main_objects/authenticator.py
+main_objects/registrator.py
+main_objects/user_interface.py
+page_objects/__init__.py
+page_objects/app_page.py
+page_objects/user_authorization_page.py
+page_objects/user_registration_page.py

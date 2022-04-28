@@ -1,0 +1,79 @@
+{% extends "base.html" %} {% block mytitle %} Вход в систему - Авторизация {%
+endblock %} {% block mybody %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='/css/user_auth_page.css') }}"
+/>
+<script src="{{ url_for('static', filename='/scripts/user_auth_page.js') }}"></script>
+<div class="container">
+    <div
+        id="Spinner"
+        class="spinner-grow text-primary d-none"
+        role="status"
+    ></div>
+    <div class="content-block">
+        <div class="shift"></div>
+        <div class="buttons-switch">
+            <button
+                id="BtnContentAuth"
+                class="btn btn-lg btn-outline-secondary disabled"
+                type="button"
+                style="border-radius: 0px"
+            >
+                Авторизация
+            </button>
+            <button
+                id="BtnContentReg"
+                class="btn btn-lg btn-secondary"
+                type="button"
+                style="border-radius: 0px"
+            >
+                Регистрация
+            </button>
+        </div>
+        <div id="ContentAuth" class="">
+            <div class="form-floating mt-1">
+                <input
+                    id="InputEmail"
+                    class="form-control"
+                    type="text"
+                    placeholder="."
+                />
+                <label for="InputEmail">Электронная почта</label>
+            </div>
+            <div class="form-floating">
+                <input
+                    id="InputPassword"
+                    class="form-control"
+                    type="password"
+                    placeholder="."
+                />
+                <label for="InputPassword">Пароль</label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    <input id="CheckBoxPassword" type="checkbox" />
+                    Показать пароль
+                </label>
+            </div>
+            <button
+                id="BtnAuth"
+                class="w-100 btn btn-lg btn-primary mt-3"
+                type="submit"
+            >
+                Войти
+            </button>
+            <button
+                id="BtnContentRestorePassword"
+                class="btn btn-link"
+                type="button"
+            >
+                Забыли пароль?
+            </button>
+        </div>
+        <div id="ContentReg" class="d-none"></div>
+        <div id="ContentRestorePassword" class="d-none"></div>
+    </div>
+</div>
+<p class="logo mt-5 text-muted">&copy; 2022 by organization work</p>
+{% endblock %}
