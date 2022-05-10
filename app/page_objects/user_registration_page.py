@@ -1,45 +1,38 @@
-from typing import *
-from main_objects.registrator import Registrator
-from utilities.enums import Errors
-from utilities.other import ErrorResponse, SuccessResponse
-from flask import request, jsonify, typing
+from flask import typing as flaskTyping
+from typing import Optional, Dict
+from main_objects.user_registration import Registration, UserDataForRegistration, UserRegistrator, UserRestorer
+from .page_funcs import get_request_data, success_response, error_response
 
 
 class UserRegistrationPage:
 	"""Страница регистрации пользователя"""
+	
+	def get_response_data_for_user_registration(self) -> flaskTyping.ResponseReturnValue:
+		"""Получает ответ - данные для регистрации пользователя."""
+		request_data = get_request_data(["invitation_token"])
+		response = self.__forms_response(request_data, UserDataForRegistration)
+		return response
+	
+	def get_response_about_user_registration(self) -> flaskTyping.ResponseReturnValue:
+		"""Получает ответ о регистрации пользователя."""
+		request_data = get_request_data(["invitation_token", "password"])
+		response = self.__forms_response(request_data, UserRegistrator)
+		return response
+	
+	def get_response_about_restore_password(self) -> flaskTyping.ResponseReturnValue:
+		"""Получает ответ о восстановлении пароля."""
+		request_data = get_request_data(["invitation_token", "user_name", "new_password"])
+		response = self.__forms_response(request_data, UserRestorer)
+		return response
 
-	def __init__(self):
-		self.__registrator = Registrator()
-		self.__error_response = ErrorResponse(Errors.auth)
-		self.__success_response = SuccessResponse()
+	def __forms_response(self, request_data: Optional[Dict[str, str]], registration: Registration):
+		"""Формирует ответ пользователю."""
+		if request_data is None:
+			return error_response(code_error=2, type_error="app")
+		init_registration = registration(request_data)
+		response = init_registration.get_response()
+		if not response:
+			code_error = init_registration.get_operation_error()
+			return error_response(code_error, type_error="auth")
+		return success_response(value=response)
 	
-	def get_response_data_for_user_registration(self) -> typing.ResponseReturnValue:
-		"""Получает ответ - данные для регистрации пользователя"""
-		try:
-			request_data = request.get_json(force=True, silent=True)
-			invitation_token = request_data.get("invitation_token", "")
-		except Exception:
-			invitation_token = ""
-		data_for_user_registration = self.__registrator.forms_data_for_user_registration(invitation_token)
-		error_code = data_for_user_registration["error_code"]
-		data = data_for_user_registration["data"]
-		if error_code is not None:
-			return jsonify(self.__error_response.create_response(error_code))
-		return jsonify(self.__success_response.create_response(value=data))
-	
-	def get_response_about_user_registration(self) -> typing.ResponseReturnValue:
-		"""Получает ответ о регистрации пользователя"""
-		try:
-			request_data = request.get_json(force=True, silent=True)
-			invitation_token = request_data.get("invitation_token", "")
-			password = request_data.get("password", "")
-		except Exception:
-			invitation_token = ""
-			password = ""
-		response_about_user_registration = self.__registrator.registers_user(invitation_token, password)
-		error_code = response_about_user_registration["error_code"]
-		if error_code is not None:
-			return jsonify(self.__error_response.create_response(error_code))
-		return jsonify(self.__success_response.create_response(
-			value="Вы успешно зарегистрировались!"
-		))

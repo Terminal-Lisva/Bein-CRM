@@ -1,66 +1,131 @@
-from typing import *
-from main_objects.authenticator import Authenticator
-from main_objects.registrator import Registrator
-from utilities.enums import Errors
-from utilities.other import ErrorResponse, SuccessResponse
-from flask import request, render_template, make_response, redirect, jsonify, typing
+from abc import ABC, abstractmethod
+from typing import Optional
+from flask import typing as flaskTyping
+from main_objects.user_authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
+from .page_funcs import get_request_data, get_cookie, success_response, success_response_with_cookies, error_response, redirect_response, render_template_response, delete_cookies
+from itertools import filterfalse
+
+
+class AuthResponseHandler(ABC):
+	"""Базовый класс для обработчиков ответа об авторизации"""
+	
+	_response: Optional[flaskTyping.ResponseReturnValue] = None
+
+	def __init__(self, successor = None):
+		self.__successor = successor
+	
+	def handle(self) -> None:
+		"""Обрабатывает."""
+		result = self._check_request()
+		if not result:
+			self.__successor.handle()
+	
+	@abstractmethod
+	def _check_request(self) -> bool:
+		raise NotImplementedError()
+	
+	def _authenticates_user(self, authentication: Authentication) -> UserAuthenticationInfo:
+		"""Аутентифицирует пользователя."""
+		return authentication.get_user_authentication_info()
+	
+	@property
+	def response(self) -> Optional[flaskTyping.ResponseReturnValue]:
+		return self._response
+
+
+class EmailAndPasswordHandler(AuthResponseHandler):
+	"""Обработчик емайла и пароля"""
+
+	def __init__(self, successor: Optional[AuthResponseHandler] = None):
+		super().__init__(successor)
+
+	def _check_request(self) -> bool:
+		request_data = get_request_data(["email", "password"])
+		if request_data is None:
+			return False	
+		email = request_data["email"]
+		password = request_data["password"]
+		authentication = AuthenticationByEmailAndPassword(email, password)
+		user_authentication_info = self._authenticates_user(authentication)
+		if user_authentication_info:
+			self._response = success_response_with_cookies(
+				value=True,
+				cookie_session=user_authentication_info.cookie_session,
+				cookie_auth=user_authentication_info.cookie_auth
+			)
+		else:
+			code_error = authentication.get_operation_error()
+			self._response = error_response(code_error, type_error="auth")
+		return True
+
+
+class CookieSessionHandler(AuthResponseHandler):
+	"""Обработчик куки сессии"""
+
+	def __init__(self, successor: Optional[AuthResponseHandler] = None):
+		super().__init__(successor)
+
+	def _check_request(self) -> bool:
+		cookie_session = get_cookie("Session")
+		authentication = AuthenticationByCookieSession(cookie_session)
+		user_authentication_info = self._authenticates_user(authentication)
+		if not user_authentication_info:
+			return False
+		self._response = redirect_response(
+			route="/app"
+		)
+		return True
+
+
+class CookieAuthHandler(AuthResponseHandler):
+	"""Обработчик куки авторизации"""
+
+	def __init__(self, successor: Optional[AuthResponseHandler] = None):
+		super().__init__(successor)
+
+	def _check_request(self) -> bool:
+		cookie_auth = get_cookie("Auth")
+		authentication = AuthenticationByCookieAuth(cookie_auth)
+		user_authentication_info = self._authenticates_user(authentication)
+		if not user_authentication_info:
+			return False
+		self._response = redirect_response(
+			route="/app",
+			cookie_session=user_authentication_info.cookie_session
+		)
+		return True
+
+
+class LastHandler(AuthResponseHandler):
+	"""Обработчик последний"""
+
+	def __init__(self, successor: Optional[AuthResponseHandler] = None):
+		super().__init__(successor)
+
+	def _check_request(self) -> bool:
+		self._response = render_template_response(
+			template_name="user_auth_page.html"
+		)
+		return True
 
 
 class UserAuthorizationPage:
 	"""Страница авторизации пользователя"""
-
-	def __init__(self):
-		self.__authenticator = Authenticator()
-		self.__error_response = ErrorResponse(Errors.auth)
-		self.__success_response = SuccessResponse()
 	
-	def get_response_about_user_authorization(self) -> typing.ResponseReturnValue:
-		"""Получает ответ об авторизации пользователя"""
-		try:
-			request_data = request.get_json(force=True, silent=True)
-			email = request_data.get("email", None)
-			password = request_data.get("password", None)
-		except Exception:
-			email = None
-			password = None
-		info_user_authentication = self.__authenticator.authenticates_user(email, password)
-		error_code = info_user_authentication["error_code"]
-		if error_code is not None:
-			return jsonify(self.__error_response.create_response(error_code))
-		user_id = info_user_authentication["user_id"]
-		if user_id is None:
-			return render_template('user_auth_page.html')
-		response = make_response(redirect('/app'))
-		cookie_session = info_user_authentication["cookie_session"]
-		if cookie_session is not None:
-			response.set_cookie(key='Session', value=cookie_session, httponly=True)
-		cookie_auth = info_user_authentication["cookie_auth"]
-		if cookie_auth is not None:
-			response.set_cookie(key='Auth', value=cookie_auth, max_age=60*60*24*30, httponly=True)
-		return response
-	
-	def get_response_about_remove_authorization(self) -> typing.ResponseReturnValue:
-		"""Получает ответ об удалении авторизации"""
-		response = make_response(jsonify(self.__success_response.create_response(value=True)))
-		response.delete_cookie('Session')
-		response.delete_cookie('Auth')
-		return response
+	def get_response_about_user_authorization(self) -> flaskTyping.ResponseReturnValue:
+		"""Получает ответ об авторизации пользователя."""
+		last_handler = LastHandler()
+		cookie_auth_handler = CookieAuthHandler(last_handler)
+		cookie_session_handler = CookieSessionHandler(cookie_auth_handler)
+		email_and_password_handler = EmailAndPasswordHandler(cookie_session_handler)
+		email_and_password_handler.handle()
+		#находим ответ из обработчиков
+		handlers = [email_and_password_handler, cookie_session_handler, cookie_auth_handler, last_handler]
+		for handler in filterfalse(
+				lambda handler: handler.response is None, 
+				handlers):
+			return handler.response
 
-	def get_response_about_restore_password(self) -> typing.ResponseReturnValue:
-		"""Получает ответ о восстановлении пароля"""
-		try:
-			request_data = request.get_json(force=True, silent=True)
-			invitation_token = request_data.get("invitation_token", "")
-			user_name = request_data.get("user_name", "")
-			password = request_data.get("password", "")
-		except Exception:
-			invitation_token = ""
-			user_name = ""
-			password = ""
-		response_about_restore_password = Registrator().restores_password(invitation_token, user_name, password)
-		error_code = response_about_restore_password["error_code"]
-		if error_code is not None:
-			return jsonify(self.__error_response.create_response(error_code))
-		return jsonify(self.__success_response.create_response(
-			value="Пароль успешно восстановлен!"
-		))
+	def get_response_about_remove_authorization(self) -> flaskTyping.ResponseReturnValue:
+		"""Получает ответ об удалении авторизации."""
+		return delete_cookies()

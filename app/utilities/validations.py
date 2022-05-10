@@ -4,11 +4,11 @@ import re
 
 
 class Validation(ABC):
-	"""Валидация (абстрактный класс)"""
+	"""Валидация"""
 
 	@abstractmethod
 	def get_result(self) -> bool:
-		"""Получает результат валидации"""
+		"""Получает результат валидации."""
 		raise NotImplementedError()
 
 
@@ -19,7 +19,7 @@ class ValidationInvitationToken(Validation):
 		self.__invitation_token = invitation_token
 	
 	def get_result(self) -> bool:
-		"""Получает результат (реализованный метод)"""
+		"""Получает результат."""
 		return len(self.__invitation_token) == 32
 
 
@@ -30,7 +30,7 @@ class ValidationPassword(Validation):
 		self.__password = password
 
 	def get_result(self) -> bool:
-		"""Получает результат (реализованный метод)"""
+		"""Получает результат."""
 		if not 8 <= len(self.__password) <= 128:
 			return False
 		pattern = re.compile(
@@ -51,7 +51,7 @@ class ValidationEmail(Validation):
 		self.__email = email
 
 	def get_result(self) -> bool:
-		"""Получает результат (реализованный метод)"""
+		"""Получает результат."""
 		if not 8 <= len(self.__email) <= 256:
 			return False
 		pattern = re.compile(
@@ -73,7 +73,7 @@ class ValidationFIO(Validation):
 		self.__fio = fio
 	
 	def get_result(self) -> bool:
-		"""Получает результат (реализованный метод)"""
+		"""Получает результат."""
 		fio_split = self.__fio.split(" ")
 		if len(fio_split) != 3:
 			return False

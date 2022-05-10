@@ -9,8 +9,8 @@ class UserInterface:
         self.__user_id = user_id
         self.__db = DatabaseUserInterface()
     
-    def get_data_for_building_side_menu(self) -> List[Dict[str, Union[str, list]]]:
-        """Получает данные для построения бокового меню"""
+    def get_data_tree_for_building_side_menu(self) -> List[Dict[str, Union[str, list]]]:
+        """Получает дерево данных для построения бокового меню"""
         user_side_menu_data = self.__db.get_user_side_menu_data(self.__user_id)
         data_for_building_side_menu = []
         def creates_tree(l, parent_id):
@@ -31,6 +31,20 @@ class UserInterface:
     
     def get_permit_view_X_page(self):
         pass
+
+
+class PermittedInterface:
+    """Разрешенный интерфейс"""
+
+
+class ApplicationPage(ABS):
+    """Базовый класс страницы приложения"""
+
+    @abstractmethod
+    def response_page(self) -> flaskTyping...:
+        ...
+    
+    def _authenticates_user(self) -> :
         
-
-
+    
+    

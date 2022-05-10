@@ -297,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     contentReg.appendChild(alertErrorReg);
                 }
                 if (responseJson.hasOwnProperty("success")) {
-                    const textSuccess = responseJson.success.value;
+                    const textSuccess = "Вы успешно зарегистрировались!";
                     alertSuccessReg = createsAlertSuccess(textSuccess);
                     contentReg.appendChild(alertSuccessReg);
                 }
@@ -336,9 +336,6 @@ document.addEventListener("DOMContentLoaded", function () {
         };
         sendDataToServer("/", dataToSend)
             .then((response) => {
-                if (response.redirected) {
-                    document.location.href = "/app";
-                }
                 return response.json();
             })
             .then((responseJson) => {
@@ -346,6 +343,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     const textError = responseJson.error.name;
                     alertErrorAuth = createsAlertError(textError);
                     contentAuth.appendChild(alertErrorAuth);
+                }
+                if (responseJson.hasOwnProperty("success")) {
+                    document.location.href = "/app";
                 }
             })
             .finally(() => {
@@ -429,7 +429,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 "InputTokenForRestorePassword"
             ).value,
             user_name: document.getElementById("InputFIO").value,
-            password: password,
+            new_password: password,
         };
         sendDataToServer("/restore_user_password", dataToSend)
             .then((response) => {
@@ -444,7 +444,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
                 }
                 if (responseJson.hasOwnProperty("success")) {
-                    const textSuccess = responseJson.success.value;
+                    const textSuccess = "Пароль успешно восстановлен!";
                     alertSuccessRestorePassword =
                         createsAlertSuccess(textSuccess);
                     contentRestorePassword.appendChild(
