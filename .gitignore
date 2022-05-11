@@ -1,4 +1,5 @@
 env
+app.egg-info
 __pycache__
 web_kard.db
 logs
