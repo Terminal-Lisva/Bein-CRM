@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Union, Tuple, Dict
 from utilities.validations import Validation, ValidationInvitationToken, ValidationPassword, ValidationFIO
 from database.funcs_for_user_data import get_user_data_from_db, get_user_id_from_db, check_user_authentication_in_db, add_user_authentication_to_db, remove_user_authentication_from_db, get_user_fio_from_db
-from utilities.other import HashingData
+from utilities.other import HashingData, records_log_user_registration, records_log_user_restorer
 
 
 class EnumErrors(Enum):
@@ -86,7 +86,7 @@ class UserRegistrator(Registration):
 		self.__password = request_data["password"]
 		self.__hashing_data = HashingData()
 
-	def get_response(self) -> Optional[bool]:
+	def get_response(self) -> bool:
 		"""Получает результат регистрации пользователя."""
 		if not self._check_validation_value(
 			value=self.__invitation_token,
@@ -97,11 +97,12 @@ class UserRegistrator(Registration):
 			validation=ValidationPassword,
 			error_type=EnumErrors.NOT_VALID_PASSWORD
 			):
-			return None
+			return False
 		user_id = self.__get_user_id_from_db()
 		if user_id is None:
 			return False
 		result = self.__add_user_to_db(user_id)
+		if result: records_log_user_registration(user_id)
 		return result
 	
 	def __get_user_id_from_db(self) -> Optional[int]:
@@ -136,7 +137,7 @@ class UserRestorer(Registration):
 		self.__new_password = request_data["new_password"]
 		self.__hashing_data = HashingData()
 
-	def get_response(self) -> Optional[bool]:
+	def get_response(self) -> bool:
 		"""Получает результат восстановления пользователя."""
 		if not self._check_validation_value(
 			value=self.__invitation_token,
@@ -151,13 +152,14 @@ class UserRestorer(Registration):
 			validation=ValidationPassword,
 			error_type=EnumErrors.NOT_VALID_PASSWORD
 			):
-			return None
+			return False
 		user_id = self.__get_user_id_from_db()
 		if user_id is None:
 			return False
 		if not self.__has_user_name_in_db(user_id):
 			return False
 		result = self.__restores_user_to_db(user_id)
+		if result: records_log_user_restorer(user_id)
 		return result
 	
 	def __get_user_id_from_db(self) -> Optional[int]:

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from .cookies import CookieError, GetterDataFromCookies, GetterDataFromCookieSession, GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth
-from utilities.other import HashingData
+from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
 from dataclasses import dataclass
 from utilities.validations import ValidationEmail, ValidationPassword
@@ -121,6 +121,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 			return UserAuthenticationInfo()
 		cookie_session = self.__creator_cookie_session.creates(user_id)
 		cookie_auth = self.__creator_cookie_auth.creates(self.__email, hashed_password)
+		records_log_user_authentication(user_id, type_auth='Email&Password')
 		return UserAuthenticationInfo(user_id, cookie_session, cookie_auth)
 	
 	def __check_validation_email(self) -> bool:
@@ -166,6 +167,7 @@ class AuthenticationByCookieSession(Authentication):
 		user_id = self.__getter_user_id_from_cookie_session.get(self.__cookie_session)
 		if user_id is None:
 			return UserAuthenticationInfo()
+		records_log_user_authentication(user_id, type_auth='CookieSession')
 		return UserAuthenticationInfo(user_id)
 			
 
@@ -187,6 +189,7 @@ class AuthenticationByCookieAuth(Authentication):
 		if user_id is None:
 			return UserAuthenticationInfo()
 		cookie_session = self.__creator_cookie_session.creates(user_id)
+		records_log_user_authentication(user_id, type_auth='CookieAuth')
 		return UserAuthenticationInfo(user_id, cookie_session)
 
 
