@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from flask import typing as flaskTyping
-from main_objects.user_authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
-from .page_funcs import get_request_data, get_cookie, success_response, success_response_with_cookies, error_response, redirect_response, render_template_response, delete_cookies
+from service_layer.user_authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
+from .page_funcs import get_request_data, get_cookie, make_success_response, add_cookies_to_response, error_response, redirect_response, add_cookie_session_to_response, template_response, delete_cookies
 from itertools import filterfalse
 
 
@@ -48,8 +48,9 @@ class EmailAndPasswordHandler(AuthResponseHandler):
 		authentication = AuthenticationByEmailAndPassword(email, password)
 		user_authentication_info = self._authenticates_user(authentication)
 		if user_authentication_info:
-			self._response = success_response_with_cookies(
-				value=True,
+			self._response = make_success_response(value=True)
+			add_cookies_to_response(
+				self._response,
 				cookie_session=user_authentication_info.cookie_session,
 				cookie_auth=user_authentication_info.cookie_auth
 			)
@@ -69,11 +70,10 @@ class CookieSessionHandler(AuthResponseHandler):
 		cookie_session = get_cookie("Session")
 		authentication = AuthenticationByCookieSession(cookie_session)
 		user_authentication_info = self._authenticates_user(authentication)
+		print(user_authentication_info)
 		if not user_authentication_info:
 			return False
-		self._response = redirect_response(
-			route="/app"
-		)
+		self._response = redirect_response(route="/app")
 		return True
 
 
@@ -89,8 +89,9 @@ class CookieAuthHandler(AuthResponseHandler):
 		user_authentication_info = self._authenticates_user(authentication)
 		if not user_authentication_info:
 			return False
-		self._response = redirect_response(
-			route="/app",
+		self._response = redirect_response(route="/app")
+		add_cookie_session_to_response(
+			self._response,
 			cookie_session=user_authentication_info.cookie_session
 		)
 		return True
@@ -103,9 +104,7 @@ class LastHandler(AuthResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		self._response = render_template_response(
-			template_name="user_auth_page.html"
-		)
+		self._response = template_response(template="user_auth_page.html")
 		return True
 
 
@@ -128,4 +127,6 @@ class UserAuthorizationPage:
 
 	def get_response_about_remove_authorization(self) -> flaskTyping.ResponseReturnValue:
 		"""Получает ответ об удалении авторизации."""
-		return delete_cookies()
+		response = make_success_response(value=True)
+		delete_cookies(response)
+		return response

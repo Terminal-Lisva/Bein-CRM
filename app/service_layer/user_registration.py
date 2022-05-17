@@ -2,12 +2,12 @@ from enum import Enum
 from abc import ABC, abstractmethod
 from typing import Optional, Union, Tuple, Dict
 from utilities.validations import Validation, ValidationInvitationToken, ValidationPassword, ValidationFIO
-from database.funcs_for_user_data import get_user_data_from_db, get_user_id_from_db, check_user_authentication_in_db, add_user_authentication_to_db, remove_user_authentication_from_db, get_user_fio_from_db
+from database import user_db
 from utilities.other import HashingData, records_log_user_registration, records_log_user_restorer
 
 
 class EnumErrors(Enum):
-    """Перечисления ошибок"""
+    """Перечисление ошибок"""
     NOT_VALID_TOKEN = 1
     NOT_TOKEN = 2
     NOT_VALID_PASSWORD = 3
@@ -36,7 +36,7 @@ class Registration(ABC):
 			self._set_operation_error(error_type)
 		return result
 
-	def _set_operation_error(self, error_type: EnumErrors):
+	def _set_operation_error(self, error_type: EnumErrors) -> None:
 		"""Устанавливает ошибку операции."""
 		self._operation_error = error_type.value
 
@@ -62,15 +62,15 @@ class UserDataForRegistration(Registration):
 			error_type=EnumErrors.NOT_VALID_TOKEN
 			):
 			return None
-		user_data_from_db = self.__get_user_data_from_db()
-		return user_data_from_db
+		user_data = self.__get_user_data_from_db()
+		return user_data
 
 	def __get_user_data_from_db(self) -> Optional[tuple]:
 		"""Получает данные пользователя из базы данных. Если данные пользователя отсутствуют устанавливает соответствующую ошибку операции."""
-		user_data_from_db = get_user_data_from_db(self.__invitation_token)
-		if user_data_from_db is None:
+		user_data = user_db.get_user_data(self.__invitation_token)
+		if user_data is None:
 			self._set_operation_error(EnumErrors.NOT_TOKEN)
-		return user_data_from_db	
+		return user_data	
 
 
 class UserRegistrator(Registration):
@@ -107,18 +107,18 @@ class UserRegistrator(Registration):
 	
 	def __get_user_id_from_db(self) -> Optional[int]:
 		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
-		user_id = get_user_id_from_db(self.__invitation_token)
+		user_id = user_db.get_user_id(self.__invitation_token)
 		if user_id is None:
 			self._set_operation_error(EnumErrors.NOT_TOKEN)
 		return user_id
 	
 	def __add_user_to_db(self, user_id: int) -> bool:
 		"""Добавляет пользователя в базу данных. Если пользователь уже имеется в базе данных устанавливает соответствующую ошибку операции."""
-		if not check_user_authentication_in_db(user_id):
+		if not user_db.check_user_authentication(user_id):
 			self._set_operation_error(EnumErrors.USER_IS_BD)
 			return False
 		hashed_password = self.__hashing_data.calculate_hash(self.__password)
-		add_user_authentication_to_db(user_id, hashed_password)
+		user_db.add_user_authentication(user_id, hashed_password)
 		return True
 
 
@@ -164,24 +164,24 @@ class UserRestorer(Registration):
 	
 	def __get_user_id_from_db(self) -> Optional[int]:
 		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
-		user_id = get_user_id_from_db(self.__invitation_token)
+		user_id = user_db.get_user_id(self.__invitation_token)
 		if user_id is None:
 			self._set_operation_error(EnumErrors.NOT_TOKEN)
 		return user_id
 	
 	def __has_user_name_in_db(self, user_id: int) -> bool:
 		"""Проверяет полученное имя пользователя на соответствие с именем в базе данных. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
-		user_name_from_db = get_user_fio_from_db(user_id)
-		if not (result := self.__user_name == user_name_from_db):
+		user_name = user_db.get_user_fio(user_id)
+		if not (result := self.__user_name == user_name):
 			self._set_operation_error(EnumErrors.NOT_USER_NAME)
 		return result
 
 	def __restores_user_to_db(self, user_id: int) -> bool:
 		"""Восстанавливает пользователя в базе данных. Если пользователя нет в базе данных устанавливает соответствующую ошибку операции."""
-		if check_user_authentication_in_db(user_id):
+		if user_db.check_user_authentication(user_id):
 			self._set_operation_error(EnumErrors.USER_IS_NOT_BD)
 			return False
-		remove_user_authentication_from_db(user_id)
+		user_db.remove_user_authentication(user_id)
 		hashed_new_pas = self.__hashing_data.calculate_hash(self.__new_password)
-		add_user_authentication_to_db(user_id, hashed_new_pas)
+		user_db.add_user_authentication(user_id, hashed_new_pas)
 		return True

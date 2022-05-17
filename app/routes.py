@@ -1,50 +1,49 @@
 from app import app
 from flask import request, typing as flaskTyping
-from page_objects.page_funcs import error_response
-from page_objects.user_registration_page import UserRegistrationPage
-from page_objects.user_authorization_page import UserAuthorizationPage
-#from page_objects.app_page import AppPage
+from pages.page_funcs import error_response
+from pages.user_registration_page import UserRegistrationPage
+from pages.user_authorization_page import UserAuthorizationPage
+from pages.app_page import AppPage
 
 
 @app.route("/data_for_user_registration", methods=["POST"])
 def get_data_for_user_registration() -> flaskTyping.ResponseReturnValue:
-	"""Получает данные для регистрации пользователя"""
+	"""Получает данные для регистрации пользователя."""
 	if request.method == "POST":
 		return UserRegistrationPage().get_response_data_for_user_registration()
 	return error_response(code_error=1, type_error="app")
 
 @app.route("/user_registration", methods=["POST"])
 def registers_user() -> flaskTyping.ResponseReturnValue:
-	"""Регистрирует пользователя"""
+	"""Регистрирует пользователя."""
 	if request.method == "POST":
 		return UserRegistrationPage().get_response_about_user_registration()
 	return error_response(code_error=1, type_error="app")
 
 @app.route("/restore_user_password", methods=["POST"])
 def restores_user_password() -> flaskTyping.ResponseReturnValue:
-	"""Восстанавливает пароль пользователя"""
+	"""Восстанавливает пароль пользователя."""
 	if request.method == "POST":
 		return UserRegistrationPage().get_response_about_restore_password()
 	return error_response(code_error=1, type_error="app")
 
 @app.route("/", methods=["GET", "POST"])
 def authorizes_user() -> flaskTyping.ResponseReturnValue:
-	"""Авторизирует пользователя"""
+	"""Авторизирует пользователя."""
 	if request.method in ["GET", "POST"]:
 		return UserAuthorizationPage().get_response_about_user_authorization()
 	return error_response(code_error=1, type_error="app")
 
-@app.route("/remove_user_authorization", methods=["POST"])
+@app.route("/remove_user_authorization", methods=["DELETE"])
 def removes_user_authorization() -> flaskTyping.ResponseReturnValue:
-	"""Удаляет авторизацию пользователя"""
-	if request.method == "POST":
+	"""Удаляет авторизацию пользователя."""
+	if request.method == "DELETE":
 		return UserAuthorizationPage().get_response_about_remove_authorization()
 	return error_response(code_error=1, type_error="app")
 
 @app.route("/app", methods=["GET"])
 def get_app_page() -> flaskTyping.ResponseReturnValue:
-	"""Получает страницу приложения"""
+	"""Получает страницу приложения."""
 	if request.method == "GET":
-		return 'Привеееет!'
-		#return AppPage().get_page()
+		return AppPage().get_response_page()
 	return error_response(code_error=1, type_error="app")

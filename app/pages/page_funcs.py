@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Any
 from flask import request, typing as flaskTyping, jsonify, make_response, redirect, render_template
 from utilities.enums import Errors
 
@@ -36,30 +36,33 @@ def error_response(code_error: int, type_error: str) -> flaskTyping.ResponseRetu
 	}
     return jsonify(response)
 
-def success_response_with_cookies(value: Union[list, bool], cookie_session: str, cookie_auth: str) -> flaskTyping.ResponseReturnValue: 
-    """Успешный ответ с куками. Применяется для авторизации по лог и паролю."""
-    response = make_response(success_response(value))
+def make_success_response(value: Union[list, bool]) -> flaskTyping.ResponseReturnValue:
+    """Сделанный успешный ответ."""
+    return make_response(success_response(value))
+
+def redirect_response(route: str) -> flaskTyping.ResponseReturnValue:
+    """Перенаправляемый ответ."""
+    return make_response(redirect(route))
+
+def template_response(template: str, data: Any = None) -> flaskTyping.ResponseReturnValue:
+    """Шаблонный ответ."""
+    return make_response(render_template(template, data=data))
+
+def add_cookies_to_response(response: flaskTyping.ResponseReturnValue, cookie_session: str, cookie_auth: str) -> None:
+    """Добавляет куки сессии и авторизации к ответу."""
     response.set_cookie(key='Session', value=cookie_session, httponly=True)
     response.set_cookie(key='Auth', value=cookie_auth, max_age=60*60*24*30, httponly=True)
-    return response
 
-def redirect_response(route: str, cookie_session: Optional[str] = None) -> flaskTyping.ResponseReturnValue:
-    """Перенаправляемый ответ. Может быть с кукой сессии."""
-    response = make_response(redirect(route))
-    if cookie_session is not None:
-        response.set_cookie(key='Session', value=cookie_session, httponly=True)
-    return response
+def add_cookie_session_to_response(response: flaskTyping.ResponseReturnValue, cookie_session: Optional[str]) -> None:
+    """Добавляет куки сессии к ответу."""
+    if cookie_session is None: return
+    response.set_cookie(key='Session', value=cookie_session, httponly=True)
 
-def render_template_response(template_name: str, cookie_session: Optional[str] = None) -> flaskTyping.ResponseReturnValue:
-    """Ответ с передачей шаблона."""
-    response = make_response(render_template(template_name))
-    if cookie_session is not None:
-        response.set_cookie(key='Session', value=cookie_session, httponly=True)
-    return response
-
-def delete_cookies() -> flaskTyping.ResponseReturnValue:
+def delete_cookies(response: flaskTyping.ResponseReturnValue) -> None:
     """Удаляет куки."""
-    response = make_response(success_response(value=True))
     response.delete_cookie('Session')
     response.delete_cookie('Auth')
-    return response
+
+def get_current_page_uri() -> str:
+    """Получает текущий URI страницы."""
+    return request.path

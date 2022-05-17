@@ -21,7 +21,7 @@ class HashingData:
 		"""Вычисляет хэш по алгоритму SHA256."""
 		salted_string = str(string) + self.__salt
 		return hmac.new(
-			HashingData.__key.encode(),
+			self.__key.encode(),
 			msg=salted_string.encode(),
 			digestmod=sha256
 		).hexdigest().upper()
@@ -41,23 +41,24 @@ def records_log_user_authentication(user_id: int, type_auth: str) -> None:
 
 
 class Email:
-    """Электронная почта"""
+	"""Электронная почта"""
 
 	__email: str
 	__password: str
 
-	def __init__():
+	def __init__(self):
 		self.__email = '***@***.**'
 		self.__password = '***********'
 
-    def send(to: str, subject: str, text: str) -> None:
+	def send(self, to: str, subject: str, text: str) -> None:
 		"""Отправляет письмо.""" 
-        msg = MIMEMultipart()
-        msg['To'] = to
-        msg['From'] = self.__email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(text_message, 'plain'))
-        server = smtplib.SMTP_SSL('smtp.yandex.ru', 465)
-        server.login(self.__email, self.__password)
-        server.send_message(msg)
-        server.quit()
+		pass
+		#msg = MIMEMultipart()
+		#msg['To'] = to
+		#msg['From'] = self.__email
+		#msg['Subject'] = subject
+		#msg.attach(MIMEText(text_message, 'plain'))
+		#server = smtplib.SMTP_SSL('smtp.yandex.ru', 465)
+		#server.login(self.__email, self.__password)
+		#server.send_message(msg)
+		#server.quit()

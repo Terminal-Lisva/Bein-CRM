@@ -1,6 +1,6 @@
 from flask import typing as flaskTyping
 from typing import Optional, Dict
-from main_objects.user_registration import Registration, UserDataForRegistration, UserRegistrator, UserRestorer
+from service_layer.user_registration import Registration, UserDataForRegistration, UserRegistrator, UserRestorer
 from .page_funcs import get_request_data, success_response, error_response
 
 

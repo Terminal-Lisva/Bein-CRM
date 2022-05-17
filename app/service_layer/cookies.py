@@ -57,7 +57,10 @@ class GetterDataFromCookies(ABC):
 	
 	def _decrypts_data(self, data: str) -> str:
 		"""Расшифровывает данные, зашифрованные стандартом base64."""
-		return base64.b64decode(data.encode()).decode()
+		try:
+			return base64.b64decode(data.encode() + b'===').decode()
+		except (UnicodeDecodeError, Exception):
+			return ""
 	
 
 class GetterDataFromCookieSession(GetterDataFromCookies):

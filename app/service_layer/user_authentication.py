@@ -5,7 +5,7 @@ from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
 from dataclasses import dataclass
 from utilities.validations import ValidationEmail, ValidationPassword
-from database.funcs_for_user_data import get_user_id_from_db
+from database import user_db
 
 
 class GetterUserIDFromCookies(ABC):
@@ -31,7 +31,7 @@ class GetterUserIDFromCookieSession(GetterUserIDFromCookies):
 		super().__init__(GetterDataFromCookieSession)
 		self.__hashing_data = HashingData()
 	
-	def get(self, cookie: str) -> Optional[int]:
+	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки сессии."""
 		if cookie is None:
 			return None
@@ -50,7 +50,7 @@ class GetterUserIDFromCookieAuth(GetterUserIDFromCookies):
 	def __init__(self):
 		super().__init__(GetterDataFromCookieAuth)
 
-	def get(self, cookie: str) -> Optional[int]:
+	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки авторизации."""
 		if cookie is None:
 			return None
@@ -58,7 +58,7 @@ class GetterUserIDFromCookieAuth(GetterUserIDFromCookies):
 			email, hashed_password = self._data_from_cookie.get(cookie)
 		except CookieError:
 			return None
-		user_id = get_user_id_from_db((email, hashed_password))
+		user_id = user_db.get_user_id((email, hashed_password))
 		return user_id
 
 @dataclass
@@ -83,7 +83,7 @@ class Authentication(ABC):
 
 
 class EnumErrors(Enum):
-    """Перечисления ошибок."""
+    """Перечисление ошибок"""
     NOT_VALID_EMAIL = 8
     NOT_VALID_PASSWORD = 3
     NOT_USER = 9
@@ -138,12 +138,12 @@ class AuthenticationByEmailAndPassword(Authentication):
 	
 	def __get_user_id_from_db(self, hashed_password: str) -> Optional[int]:
 		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
-		user_id = get_user_id_from_db((self.__email, hashed_password))
+		user_id = user_db.get_user_id((self.__email, hashed_password))
 		if user_id is None:
 			self.__set_operation_error(EnumErrors.NOT_USER)
 		return user_id
 			
-	def __set_operation_error(self, error_type: EnumErrors):
+	def __set_operation_error(self, error_type: EnumErrors) -> None:
 		"""Устанавливает ошибку операции."""
 		self.__operation_error = error_type.value
 
@@ -211,11 +211,11 @@ class AuthenticationByCookies(Authentication):
 	
 	def get_user_authentication_info(self) -> UserAuthenticationInfo:
 		"""Получает информацию об аутентификации пользователя."""
-		user_id = self.__getter_user_id_from_cookie_session.get(self.__cookie_session)
-		if user_id is not None:
-			return UserAuthenticationInfo(user_id)
-		user_id = self.__getter_user_id_from_cookie_auth.get(self.__cookie_auth)
-		if user_id is None:
+		user_id_from_cookie_session = self.__getter_user_id_from_cookie_session.get(self.__cookie_session)
+		if user_id_from_cookie_session is not None:
+			return UserAuthenticationInfo(user_id_from_cookie_session)
+		user_id_from_cookie_auth = self.__getter_user_id_from_cookie_auth.get(self.__cookie_auth)
+		if user_id_from_cookie_auth is None:
 			return UserAuthenticationInfo()
-		cookie_session = self.__creator_cookie_session.creates(user_id)
-		return UserAuthenticationInfo(user_id, cookie_session)
+		cookie_session = self.__creator_cookie_session.creates(user_id_from_cookie_auth)
+		return UserAuthenticationInfo(user_id_from_cookie_auth, cookie_session)

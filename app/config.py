@@ -43,20 +43,22 @@ class HandlerRecordingFile(Handler):
             f.write(text + "\n")
 
 
-class HandlerSendError(Handler):
-    """Обрабочтик отправки ошибки на эл. почту"""
+class HandlerSendByEmail(Handler):
+    """Обрабочтик отправки на эл. почту"""
 
     __email: Email
+    __to: str
+    __subject: str
 
-    def __init__():
+    def __init__(self, to, subject):
         super().__init__()
         self.__email = Email()
+        self.__to = to
+        self.__subject = subject
     
     def emit(self, record: logging.LogRecord) -> None:
-        to = "***@***.**"
-        subject = "Error info portal"
         text = self.format(record)
-        self.__email.send(to, subject, text)
+        self.__email.send(self.__to, self.__subject, text)
     
 
 #-------------------------------КОНФИГУРАЦИЯ---------------------------------
@@ -106,8 +108,10 @@ logger_config = {
             'filters': ['user_authentication']
         },
         'error_500': {
-            '()': HandlerSendError,
+            '()': HandlerSendByEmail,
             'level': 'ERROR',
+            'to': '***@*****.**',
+            'subject': 'Error info portal',
             'formatter': 'universal_formatter'
         }
     },
@@ -118,6 +122,7 @@ logger_config = {
                 'user_registration', 
                 'user_restorer', 
                 'user_authentication',
+                'error_500'
             ] 
         }
     }

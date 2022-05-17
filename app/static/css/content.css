@@ -1,0 +1,88 @@
+body {
+    padding-top: 56px;
+}
+
+.sticky-offset {
+    top: 56px;
+}
+
+/* Navbar */
+.navbar-brand {
+    padding-left: 1rem;
+}
+
+.navbar-nav {
+    padding-right: 1rem;
+}
+
+#body-row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* БОКОВОЕ МЕНЮ */
+#sidebar-container {
+    min-height: 100vh;
+    background-color: #333;
+    padding: 0;
+}
+
+.sidebar-title {
+    background-color: #333;
+    height: 35px;
+}
+
+/* Menu item*/
+#sidebar-container .list-group a {
+    height: 50px;
+    color: white;
+}
+
+/* Submenu item*/
+#sidebar-container .list-group .sidebar-submenu a {
+    height: 45px;
+    padding-left: 30px;
+}
+
+.item-menu-icon {
+    margin-right: 1rem;
+}
+
+.item-sidebar {
+    background-color: #343a40;
+}
+
+.item-sidebar:hover {
+    background-color: rgb(33, 37, 41);
+}
+
+.sidebar-submenu {
+    font-size: 0.9rem;
+}
+
+.item-menu-icons-arrow {
+    padding-left: 10px;
+    margin-left: auto;
+}
+
+/* Closed submenu icon */
+#sidebar-container
+    .list-group
+    .list-group-item[aria-expanded="false"]
+    .item-menu-icons-arrow
+    .ico-arrow {
+    height: 12px;
+    width: 12px;
+    background-image: url("data:image/svg+xml,<svg viewBox='0 0 14 14' fill='%23fff' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z' clip-rule='evenodd'/></svg>");
+}
+
+/* Opened submenu icon */
+#sidebar-container
+    .list-group
+    .list-group-item[aria-expanded="true"]
+    .item-menu-icons-arrow
+    .ico-arrow {
+    height: 12px;
+    width: 12px;
+    background-image: url("data:image/svg+xml,<svg viewBox='0 0 14 14' fill='%23fff' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z' clip-rule='evenodd'/></svg>");
+}
