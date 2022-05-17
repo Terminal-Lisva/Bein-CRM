@@ -1,0 +1,132 @@
+{% extends "base.html" %} {% block mytitle %} Главная {% endblock %} {% block
+mybody %}
+
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='/css/content.css') }}"
+/>
+
+<script src="{{ url_for('static', filename='/scripts/content.js') }}" type="module"></script>
+
+<!-- Bootstrap NavBar -->
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top justify-content-between">
+    <a class="navbar-brand" href="/app">Информационный портал</a>
+    <ul class="navbar-nav">
+        <li class="nav-item text-nowrap">
+            <a id="btn-exit" class="nav-link" type="button">Выйти</a>
+        </li>
+    </ul>  
+</nav>
+
+<!-- NavBar END -->
+
+<!-- Bootstrap row -->
+<div class="row" id="body-row">
+        <!-- Sidebar -->  
+        <div id="sidebar-container" class="d-md-block col-md-2">
+            <ul class="list-group sticky-top sticky-offset">
+                <!-- Title -->
+                <li
+                    class="list-group-item sidebar-title text-muted d-flex align-items-center menu-collapsed"
+                >
+                    <small>Меню пользователя:</small>
+                </li>
+                <!-- /END Title -->
+                <!-- Menu with submenu -->
+                {% set icon_codes = {
+                    'Аналитика и статистика': 'M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z',
+                    'Документация и записи': 'M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zM5 4h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1zm0 2h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1z',
+                    'Персонал': 'M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+                    'Процессное управление': 'M2.5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2h-11zm5 2h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm-5 1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V3zm9-1h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z',
+                    'Управление качеством': 'M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm2.146 5.146a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647z',
+                   'Целеполагание': 'M16 2a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9.586a1 1 0 0 1 .707.293l2.853 2.853a.5.5 0 0 0 .854-.353V2zM3.5 3h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1z'                   
+                } %}
+                {% set side_menu_data = data['side_menu']['side_menu_data'] %} 
+                {% set page_uri = data['side_menu']['page_uri'] %} 
+                {% set global_id = '0' %}
+                <div class="accordion" id="accordion{{ global_id }}">
+                    {% macro render_tree(side_menu_data, id) -%} 
+                    {% for i in range(side_menu_data|count) %} 
+                    {% set name = side_menu_data[i]['name'] %} 
+                    {% set href = side_menu_data[i]['href'] %} 
+                    {% set children = side_menu_data[i]['children'] %} 
+                    {% if children|length != 0 %} 
+                    {% set new_id = id + i|string %}
+                    <a
+                        href="#submenu{{ new_id }}"
+                        data-toggle="collapse"
+                        aria-expanded="false"
+                        class="item-sidebar list-group-item collapsed"
+                    >
+                        <div
+                            class="d-flex w-100 justify-content-start align-items-center"
+                        >
+                            <span class="item-menu-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-graph-up-arrow" viewBox="0 0 18 18">
+                                <path fill-rule="evenodd" d="{{ icon_codes[name] }}"/>
+                              </svg></span>
+                            <span class="item-menu-name">{{ name }}</span>
+                            <span class="item-menu-icons-arrow">
+                                <div class="ico-arrow"></div>
+                            </span>
+                        </div>
+                    </a>
+                    <!-- Submenu content -->
+                    {% if href == page_uri %} 
+                    {% set class_collapse = "collapse show" %} 
+                    {% else %} 
+                    {% set class_collapse = "collapse" %} 
+                    {% endif %}
+                    <div id="submenu{{ new_id }}" class="{{ class_collapse }} sidebar-submenu" data-parent="#accordion{{ global_id }}">
+                    {{- render_tree(side_menu_data[i]['children'], new_id) -}}
+                    </div>
+                    {% elif id != '0' %}
+                    <a href="{{ href }}" class="item-sidebar list-group-item collapsed">
+                        <span class="item-menu-name">{{ name }}</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ href }}" class="item-sidebar list-group-item collapsed">
+                        <div class="d-flex w-100 justify-content-start align-items-center">
+                            <span class="fa fa-calendar fa-fw mr-3"></span>
+                            <span class="item-menu-name">{{ name }}</span>
+                        </div>
+                    </a>
+                    {% endif %} 
+                    {% endfor %} 
+                    {%- endmacro %} 
+                    {{ render_tree(side_menu_data, global_id) }}
+                </div>  
+            <!-- List Group END-->
+        </div>
+        <!-- sidebar-container END -->
+
+        <!-- MAIN -->
+        <div class="col py-3">
+            <h1 style="text-align: center">
+                Добро пожаловать!
+            </h1>
+            <h2>
+                <small class="text-muted">Version 1.1</small>
+            </h2>
+
+            <div class="card">
+                <h5 class="card-header">Что нового?</h5>
+                <div class="card-body">
+                    <ul>
+                        <li>Завершена работа по созданию архитектуры серверной части ("back-end");</li>
+                        <li>Разработана система логгирования ("back-end");</li>
+                        <li>Выполнена верстка страницы с контентом ("front-end")</li>
+                    </ul>
+                </div>
+            </div>
+        
+            <hr/>            
+            <p>
+                Информационный портал - веб-сервис для решения задач в области организации и автоматизации труда. Состоит из следующих информационных блоков: аналитика данных (интеграция с PowerBI), система документооборота (тесна связана с процессным подходом, кастомная разработка), система обратной связи (сотрудник-руководитель), процессный подход, управление качеством, целепологание (сбор информации для аналитики).
+            </p>
+            <hr/>
+        </div>
+        <!-- Main Col END -->
+    </div>
+    <!-- body-row END -->
+    {% endblock %}
+</div>
