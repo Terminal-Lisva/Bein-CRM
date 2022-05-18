@@ -155,7 +155,8 @@ class PageAvailableWithoutSideMenu(PageAvailable):
     """Страница доступная без бокового меню"""
 
     def __init__(self, template: str):
-        pass
+        constructor = ConstructorPageTemplateWithoutSideMenu(template)
+        super().__init__(constructor)
 
 
 class PageWithPermitViewWithSideMenu(PageWithPermitView):
@@ -169,7 +170,7 @@ class PageWithPermitViewWithSideMenu(PageWithPermitView):
 class PageWithPermitViewWithoutSideMenu(PageWithPermitView):
     """Страница без бокового меню с разрешением на ее просмотр"""
 
-    def __init__(self, template: str):
-        pass
+    constructor = ConstructorPageTemplateWithoutSideMenu(template)
+        super().__init__(constructor)
 
 #также можно создать страницу со своим конструктором и с добавкой данных
