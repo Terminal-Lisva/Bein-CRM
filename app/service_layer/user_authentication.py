@@ -85,8 +85,8 @@ class Authentication(ABC):
 class EnumErrors(Enum):
     """Перечисление ошибок"""
     NOT_VALID_EMAIL = 8
-    NOT_VALID_PASSWORD = 3
-    NOT_USER = 9
+    NOT_VALID_PASSWORD = 9
+    NOT_USER = 10
 
 
 class AuthenticationByEmailAndPassword(Authentication):
