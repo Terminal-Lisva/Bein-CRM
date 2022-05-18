@@ -1,7 +1,7 @@
 from typing import Any, List, Dict, Union, Optional
 from abc import ABC, abstractmethod
 from flask import typing as flaskTyping
-from .page_funcs import template_response, get_current_page_uri, get_cookie
+from .page_funcs import template_response, get_current_page_uri, get_cookie, add_cookie_session_to_response
 from service_layer.user_authentication import UserAuthenticationInfo, AuthenticationByCookies
 from database import page_db
 
@@ -27,7 +27,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         super().__init__(template)
     
     def creates(self, user_id: int, page_uri: str, *args: Any) -> flaskTyping.ResponseReturnValue:
-        """Создает страницу с боковым меню."""
+        """Создает страницу с боковым меню. У пользователей разные права просмотра бокового меню."""
         side_menu_data = self.__get_tree_side_menu_data(user_id)
         page = template_response(
             self._template,
@@ -71,7 +71,7 @@ class Page(ABC):
     __user_authentication_info: UserAuthenticationInfo
 
     def __init__(self, constructor):
-        self._page_uri = get_current_page_uri() #/app
+        self._page_uri = get_current_page_uri()
         self._constructor = constructor
         self.__user_authentication_info = self.__authenticates_user() 
     
@@ -98,3 +98,20 @@ class Page(ABC):
         """Разрешение просмотра страницы."""
         permit = page_db.get_permit_view_page(user_id, self._page_uri)
         return permit
+
+
+class PageWithSideMenu(Page):
+    """Страница с боковым меню"""
+
+    def __init__(self, template: str):
+        constructor = ConstructorPageTemplateWithSideMenu(template)
+        super().__init__(constructor)
+    
+    def _forms_response_page(self, user_id: int) -> flaskTyping.ResponseReturnValue:
+        """Формирует ответ страницу."""
+        response_page = self._constructor.creates(user_id, self._page_uri)
+        add_cookie_session_to_response(
+            response_page, 
+            cookie_session = self._get_cookie_session()
+        )
+        return response_page
