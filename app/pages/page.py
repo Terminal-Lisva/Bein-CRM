@@ -1,9 +1,9 @@
-from typing import Any, List, Dict, Union, Optional
+from typing import Any, List, Dict, Union, Optional, Tuple
 from abc import ABC, abstractmethod
 from flask import typing as flaskTyping
 from .page_funcs import template_response, get_current_page_uri, get_cookie, add_cookie_session_to_response
 from service_layer.user_authentication import UserAuthenticationInfo, AuthenticationByCookies
-from database import page_db
+from database import page_db, user_db
 
 
 class ConstructorPageTemplate(ABC):
@@ -20,27 +20,27 @@ class ConstructorPageTemplate(ABC):
         raise NotImplementedError()
 
 
+# Разные варианты конструкторов страниц:
 class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
     """Конструктор шаблона страницы с боковым меню"""
 
     def __init__(self, template):
         super().__init__(template)
     
-    def creates(self, user_id: int, page_uri: str, *args: Any) -> flaskTyping.ResponseReturnValue:
-        """Создает страницу с боковым меню. У пользователей разные права просмотра бокового меню."""
+    def creates(self, kwargs: Dict[str, Union[int, str, Any]]) -> flaskTyping.ResponseReturnValue:
+        """Создает страницу с боковым меню. У пользователей разная видимость бокового меню."""
+        user_id = kwargs.get('user_id')
         side_menu_data = self.__get_tree_side_menu_data(user_id)
+        user_data = user_db.get_user_data(user_id)
         page = template_response(
             self._template,
             data = {
-                'side_menu': {
-                    'side_menu_data': side_menu_data,
-                    'page_uri': page_uri
-                }, 
-                'supplement': args
+                'side_menu_data': side_menu_data,
+                'user_data': user_data,
+                'supplement': kwargs.get('page_uri', None)
             }
         )
         return page
-
 
     def __get_tree_side_menu_data(self, user_id: int) -> List[Dict[str, Union[str, list]]]:
         """Получает дерево данных бокового меню."""
@@ -63,15 +63,18 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         return tree_side_menu_data
 
 
+class ConstructorPageTemplateWithoutSideMenu(ConstructorPageTemplate):
+    """Конструктор шаблона страницы без бокового меню"""
+    pass
+
+
 class Page(ABC):
     """Базовый класс страница"""
 
-    _page_uri: str
     _constructor: ConstructorPageTemplate
     __user_authentication_info: UserAuthenticationInfo
 
     def __init__(self, constructor):
-        self._page_uri = get_current_page_uri()
         self._constructor = constructor
         self.__user_authentication_info = self.__authenticates_user() 
     
@@ -90,28 +93,83 @@ class Page(ABC):
         """Получает id пользователя."""
         return self.__user_authentication_info.user_id
     
-    def _get_cookie_session(self) -> Optional[str]:
+    def __get_cookie_session(self) -> Optional[str]:
         """Получает куки сессии."""
         return self.__user_authentication_info.cookie_session
+    
+    def _forms_response_page(self, **kwargs) -> flaskTyping.ResponseReturnValue:
+        """Формирует ответ страницу."""
+        response_page = self._constructor.creates(kwargs)
+        add_cookie_session_to_response(
+            response_page, 
+            cookie_session = self.__get_cookie_session()
+        )
+        return response_page
+    
 
-    def _permit_view_page(self, user_id: int) -> bool:
+#Разные варианты страниц:
+class PageAvailable(Page):
+    """Страница доступная (разрешение на ее просмотр не требуется)."""
+
+    def __init__(self, constructor: ConstructorPageTemplate):
+        super().__init__(constructor)
+    
+    def get_response_page(self) -> flaskTyping.ResponseReturnValue:
+        """Получает ответ страницу."""
+        user_id = self._get_user_id()
+        if user_id is None: return "404"
+        response_page = self._forms_response_page(user_id=user_id)
+        return response_page
+
+
+class PageWithPermitView(Page):
+    """Страница с разрешением на ее просмотр"""
+
+    def __init__(self, constructor: ConstructorPageTemplate):
+        super().__init__(constructor)
+    
+    def get_response_page(self) -> flaskTyping.ResponseReturnValue:
+        """Получает ответ страницу."""
+        user_id = self._get_user_id()
+        if user_id is None or not self.__permit_view_page(user_id):
+            return "404"
+        response_page = self._forms_response_page(user_id=user_id)
+        return response_page
+    
+    def __permit_view_page(self, user_id: int) -> bool:
         """Разрешение просмотра страницы."""
-        permit = page_db.get_permit_view_page(user_id, self._page_uri)
+        page_uri = get_current_page_uri()
+        permit = page_db.get_permit_view_page(user_id, page_uri)
         return permit
 
 
-class PageWithSideMenu(Page):
-    """Страница с боковым меню"""
+class PageAvailableWithSideMenu(PageAvailable):
+    """Страница доступная с боковым меню"""
 
     def __init__(self, template: str):
         constructor = ConstructorPageTemplateWithSideMenu(template)
         super().__init__(constructor)
-    
-    def _forms_response_page(self, user_id: int) -> flaskTyping.ResponseReturnValue:
-        """Формирует ответ страницу."""
-        response_page = self._constructor.creates(user_id, self._page_uri)
-        add_cookie_session_to_response(
-            response_page, 
-            cookie_session = self._get_cookie_session()
-        )
-        return response_page
+
+
+class PageAvailableWithoutSideMenu(PageAvailable):
+    """Страница доступная без бокового меню"""
+
+    def __init__(self, template: str):
+        pass
+
+
+class PageWithPermitViewWithSideMenu(PageWithPermitView):
+    """Страница с боковым меню с разрешением на ее просмотр """
+
+    def __init__(self, template: str):
+        constructor = ConstructorPageTemplateWithSideMenu(template)
+        super().__init__(constructor)
+
+
+class PageWithPermitViewWithoutSideMenu(PageWithPermitView):
+    """Страница без бокового меню с разрешением на ее просмотр"""
+
+    def __init__(self, template: str):
+        pass
+
+#также можно создать страницу со своим конструктором и с добавкой данных

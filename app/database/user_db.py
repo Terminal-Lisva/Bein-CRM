@@ -5,7 +5,7 @@ from functools import singledispatch
 
 #ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ИЗ БД
 @singledispatch
-def get_user_data(arg: Union[str, int]) -> None:
+def get_user_data(arg: Union[str, int]) -> Optional[tuple]:
 	"""Получает данные пользователя."""
 	pass
 

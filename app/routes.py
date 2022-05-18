@@ -4,8 +4,10 @@ from pages.page_funcs import error_response
 from pages.user_registration_page import UserRegistrationPage
 from pages.user_authorization_page import UserAuthorizationPage
 from pages.app_page import AppPage
+from pages.account_page import AccountPage
 
 
+#Страница авторизации/регистрации/восстановления пароля
 @app.route("/data_for_user_registration", methods=["POST"])
 def get_data_for_user_registration() -> flaskTyping.ResponseReturnValue:
 	"""Получает данные для регистрации пользователя."""
@@ -41,9 +43,18 @@ def removes_user_authorization() -> flaskTyping.ResponseReturnValue:
 		return UserAuthorizationPage().get_response_about_remove_authorization()
 	return error_response(code_error=1, type_error="app")
 
+#Главная страница
 @app.route("/app", methods=["GET"])
 def get_app_page() -> flaskTyping.ResponseReturnValue:
 	"""Получает страницу приложения."""
 	if request.method == "GET":
 		return AppPage().get_response_page()
+	return error_response(code_error=1, type_error="app")
+
+#Страница пользователя
+@app.route("/app/account", methods=["GET"])
+def get_account_page() -> flaskTyping.ResponseReturnValue:
+	"""Получает страницу приложения."""
+	if request.method == "GET":
+		return AccountPage().get_response_page()
 	return error_response(code_error=1, type_error="app")
