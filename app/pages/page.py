@@ -170,7 +170,8 @@ class PageWithPermitViewWithSideMenu(PageWithPermitView):
 class PageWithPermitViewWithoutSideMenu(PageWithPermitView):
     """Страница без бокового меню с разрешением на ее просмотр"""
 
-    constructor = ConstructorPageTemplateWithoutSideMenu(template)
+    def __init__(self, template: str):
+        constructor = ConstructorPageTemplateWithoutSideMenu(template)
         super().__init__(constructor)
 
 #также можно создать страницу со своим конструктором и с добавкой данных
