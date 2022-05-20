@@ -1,3 +1,4 @@
+from .page import 
 from enum import Enum
 from abc import ABC, abstractmethod
 from typing import Type, TypeVar, Optional, Dict, Union, Tuple
@@ -80,13 +81,11 @@ class HandlerRequestUserRegistration(HandlerRequest):
 
 	__invitation_token: str
 	__password: str
-	__hashing_data: HashingData
 
 	def __init__(self, request_data: Dict[str, str]):
 		super().__init__()
 		self.__invitation_token = request_data["invitation_token"]
 		self.__password = request_data["password"]
-		self.__hashing_data = HashingData()
 
 	def handle(self) -> bool:
 		"""Обрабатывает запрос на регистрацию пользователя."""
@@ -119,7 +118,7 @@ class HandlerRequestUserRegistration(HandlerRequest):
 		if not user_db.check_user_authentication(user_id):
 			self._set_operation_error(EnumErrors.USER_IS_BD)
 			return False
-		hashed_password = self.__hashing_data.calculate_hash(self.__password)
+		hashed_password = HashingData().calculate_hash(self.__password)
 		user_db.add_user_authentication(user_id, hashed_password)
 		return True
 
@@ -130,14 +129,12 @@ class HandlerRequestUserRestore(HandlerRequest):
 	__invitation_token: str
 	__user_name: str
 	__new_password: str
-	__hashing_data: HashingData
 
 	def __init__(self, request_data: Dict[str, str]):
 		super().__init__()
 		self.__invitation_token = request_data["invitation_token"]
 		self.__user_name = request_data["user_name"]
 		self.__new_password = request_data["new_password"]
-		self.__hashing_data = HashingData()
 
 	def handle(self) -> bool:
 		"""Обрабатывает запрос на восстановление пользователя."""
@@ -184,7 +181,7 @@ class HandlerRequestUserRestore(HandlerRequest):
 			self._set_operation_error(EnumErrors.USER_IS_NOT_BD)
 			return False
 		user_db.remove_user_authentication(user_id)
-		hashed_new_pas = self.__hashing_data.calculate_hash(self.__new_password)
+		hashed_new_pas = HashingData().calculate_hash(self.__new_password)
 		user_db.add_user_authentication(user_id, hashed_new_pas)
 		return True
 

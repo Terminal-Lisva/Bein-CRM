@@ -23,11 +23,7 @@ class AuthResponseHandler(ABC):
 	@abstractmethod
 	def _check_request(self) -> bool:
 		raise NotImplementedError()
-	
-	def _authenticates_user(self, authentication: Authentication) -> UserAuthenticationInfo:
-		"""Аутентифицирует пользователя."""
-		return authentication.get_user_authentication_info()
-	
+		
 	@property
 	def response(self) -> Optional[flaskTyping.ResponseReturnValue]:
 		return self._response
@@ -46,13 +42,13 @@ class EmailAndPasswordHandler(AuthResponseHandler):
 		email = request_data["email"]
 		password = request_data["password"]
 		authentication = AuthenticationByEmailAndPassword(email, password)
-		user_authentication_info = self._authenticates_user(authentication)
-		if user_authentication_info:
+		user_id = authentication.authenticates_user()
+		if user_id is not None:
 			self._response = make_success_response(value=True)
 			add_cookies_to_response(
 				self._response,
-				cookie_session=user_authentication_info.cookie_session,
-				cookie_auth=user_authentication_info.cookie_auth
+				cookie_session=authentication.get_cookie_session(),
+				cookie_auth=authentication.get_cookie_auth()
 			)
 		else:
 			code_error = authentication.get_operation_error()
@@ -69,9 +65,8 @@ class CookieSessionHandler(AuthResponseHandler):
 	def _check_request(self) -> bool:
 		cookie_session = get_cookie("Session")
 		authentication = AuthenticationByCookieSession(cookie_session)
-		user_authentication_info = self._authenticates_user(authentication)
-		print(user_authentication_info)
-		if not user_authentication_info:
+		user_id = authentication.authenticates_user()
+		if user_id is None:
 			return False
 		self._response = redirect_response(route="/app")
 		return True
@@ -86,13 +81,13 @@ class CookieAuthHandler(AuthResponseHandler):
 	def _check_request(self) -> bool:
 		cookie_auth = get_cookie("Auth")
 		authentication = AuthenticationByCookieAuth(cookie_auth)
-		user_authentication_info = self._authenticates_user(authentication)
-		if not user_authentication_info:
+		user_id = authentication.authenticates_user()
+		if user_id is None:
 			return False
 		self._response = redirect_response(route="/app")
 		add_cookie_session_to_response(
 			self._response,
-			cookie_session=user_authentication_info.cookie_session
+			cookie_session=authentication.get_cookie_session()
 		)
 		return True
 
