@@ -29,15 +29,19 @@ class HashingData:
 
 def records_log_user_registration(user_id: int) -> None:
 	"""Записывает лог регистрации пользователя."""
-	logging.getLogger('app_logger').info(f"user_id = {user_id}")
+	logging.getLogger('app_logger').info(f"REG user_id = {user_id}")
 
 def records_log_user_restorer(user_id: int) -> None:
 	"""Записывает лог восстановления пользователя."""
-	logging.getLogger('app_logger').info(f"user_id = {user_id}")
+	logging.getLogger('app_logger').info(f"RESTORE user_id = {user_id}")
 
 def records_log_user_authentication(user_id: int, type_auth: str) -> None:
 	"""Записывает лог аутентификации пользователя."""
 	logging.getLogger('app_logger').info(f"user_id = {user_id} по {type_auth}")
+
+def records_log_change_password(user_id: int) -> None:
+	"""Записывает лог изменения пароля."""
+	logging.getLogger('app_logger').info(f"CHANGE_PASSWORD user_id = {user_id}")
 
 
 class Email:

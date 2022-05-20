@@ -101,7 +101,7 @@ def check_user_authentication(user_id: int) -> bool:
 					WHEN COUNT(user_id) = 1
 					THEN False
 					ELSE True
-				END) as check_user
+				END) as check
 			FROM user_authorization as ua
 			WHERE ua.user_id = ?
 		"""
@@ -140,3 +140,20 @@ def get_user_fio(user_id: int) -> Optional[str]:
 		cursor.execute(query, (user_id,))
 		response_from_db = cursor.fetchone()
 		return response_from_db[0] if response_from_db is not None else None
+
+def check_user_password(user_id: int, hashed_password: str) -> bool:
+	"""Проверяет пароль пользователя."""
+	with SQLite() as cursor:
+		query = """
+			SELECT 
+				(CASE 
+					WHEN COUNT(user_id) = 1
+					THEN True
+					ELSE False
+				END) as check
+			FROM user_authorization as ua
+			WHERE ua.user_id = :user_id AND ua.hashed_password = :hashed_password
+		"""
+		cursor.execute(query, {'user_id': user_id, 'hashed_password': hashed_password})
+		response_from_db = bool(cursor.fetchone()[0])
+		return response_from_db

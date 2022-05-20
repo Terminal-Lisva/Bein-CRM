@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Union, Any
 from flask import request, typing as flaskTyping, jsonify, make_response, redirect, render_template
-from utilities.enums import Errors
+from utilities.errors import Errors
 
 
 #Вспомогательные функции для страниц (функционал Flask):

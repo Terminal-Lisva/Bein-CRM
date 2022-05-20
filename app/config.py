@@ -84,6 +84,10 @@ logger_config = {
             '()': Filter,
             'func_name': 'records_log_user_authentication'
         },
+        'change_password': {
+            '()': Filter,
+            'func_name': 'records_log_change_password'
+        },
     },
     'handlers': {
         'user_registration': {
@@ -107,13 +111,20 @@ logger_config = {
             'formatter': 'universal_formatter',
             'filters': ['user_authentication']
         },
+        'change_password' : {
+            '()': HandlerRecordingFile,
+            'level': 'INFO',
+            'filename': './app/logs/change_password.txt',
+            'formatter': 'universal_formatter',
+            'filters': ['change_password']
+        },
         'error_500': {
             '()': HandlerSendByEmail,
             'level': 'ERROR',
             'to': '***@*****.**',
             'subject': 'Error info portal',
             'formatter': 'universal_formatter'
-        }
+        },
     },
     'loggers': {
         'app_logger': {
@@ -122,7 +133,8 @@ logger_config = {
                 'user_registration', 
                 'user_restorer', 
                 'user_authentication',
-                'error_500'
+                'change_password',
+                'error_500',
             ] 
         }
     }

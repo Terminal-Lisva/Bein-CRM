@@ -51,8 +51,8 @@ class EmailAndPasswordHandler(AuthResponseHandler):
 				cookie_auth=authentication.get_cookie_auth()
 			)
 		else:
-			code_error = authentication.get_operation_error()
-			self._response = error_response(code_error, type_error="auth")
+			code_error, type_error = authentication.get_operation_error()
+			self._response = error_response(code_error, type_error)
 		return True
 
 

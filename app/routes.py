@@ -5,6 +5,7 @@ from pages.response_from_page import ResponseFromPage
 from pages.handlers_registration_page import HandlerRequestToGetUserDataForRegistration, HandlerRequestUserRegistration, HandlerRequestUserRestore
 from pages.user_authorization_page import UserAuthorizationPage
 from pages.page import ConstructorPageTemplateWithSideMenu, PageAvailable, PageWithPermitView
+from pages.handler_account_page import HandlerRequestChangePassword
 
 
 #Страница авторизации/регистрации/восстановления пароля:
@@ -67,4 +68,13 @@ def get_account_page() -> flaskTyping.ResponseReturnValue:
 	if request.method == "GET":
 		constructor = ConstructorPageTemplateWithSideMenu("account_page.html")
 		return PageAvailable(constructor).get_response_page()
+	return error_response(code_error=1, type_error="app")
+
+@app.route("/app/account/change_password", methods=["PUT"])
+def change_password() -> flaskTyping.ResponseReturnValue:
+	"""Изменяет пароль."""
+	if request.method == "PUT":
+		request_data = get_request_data(["password", "new_password"])
+		handler = HandlerRequestChangePassword
+		return ResponseFromPage(handler, request_data).get()
 	return error_response(code_error=1, type_error="app")

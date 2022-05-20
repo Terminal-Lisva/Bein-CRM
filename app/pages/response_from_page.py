@@ -1,38 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Union, Tuple, TypeVar, Type, Dict
-from utilities.validations import Validation
-from enum import Enum
+from .handler import HandlerRequest
+from typing import Optional, TypeVar, Type, Dict
 from flask import typing as flaskTyping
 from .page_funcs import success_response, error_response
-
-
-#Логика получения ответа от страницы:
-class HandlerRequest(ABC):
-	"""Базовый класс - Обработчик запроса"""
-
-	_operation_error: Optional[int]
-
-	def __init__(self):
-		self._operation_error = None
-
-	@abstractmethod
-	def handle(self) -> Optional[Union[bool, Tuple[str]]]:
-		"""Обрабатывает соответствующий запрос."""
-		raise NotImplementedError()
-
-	def _check_validation_value(self, value: str, validation: Validation, error_type: Enum):
-		"""Проверяет значение на валидацию."""
-		if not (result := validation(value).get_result()):
-			self._set_operation_error(error_type)
-		return result
-
-	def _set_operation_error(self, error_type: Enum) -> None:
-		"""Устанавливает ошибку операции."""
-		self._operation_error = error_type.value
-
-	def get_operation_error(self) -> Optional[int]:
-		"""Получает ошибку операции."""
-		return self._operation_error
 
 
 Handler = TypeVar("Handler", bound=HandlerRequest)
@@ -55,6 +24,6 @@ class ResponseFromPage:
 		handler = self.__handler(self.__request_data)
 		response = handler.handle()
 		if not response:
-			code_error = handler.get_operation_error()
-			return error_response(code_error, type_error="auth")
+			code_error, type_error = handler.get_operation_error()
+			return error_response(code_error, type_error)
 		return success_response(value=response)

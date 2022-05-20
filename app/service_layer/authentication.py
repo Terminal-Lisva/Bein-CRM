@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Tuple
 from .cookies import CookieError, GetterDataFromCookies, GetterDataFromCookieSession, GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth
 from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
@@ -67,11 +67,15 @@ class Authentication(ABC):
 		raise NotImplementedError()
 
 
-class EnumErrors(Enum):
-    """Перечисление ошибок"""
-    NOT_VALID_EMAIL = 8
-    NOT_VALID_PASSWORD = 9
-    NOT_USER = 10
+class ValidationErrors(Enum):
+    """Ошибки валидации"""
+    NOT_VALID_PASSWORD = 2
+	NOT_VALID_EMAIL = 5
+
+
+class AuthErrors(Enum):
+    """Ошибки авторизации"""
+    NOT_USER = 1
 
 
 class AuthenticationByEmailAndPassword(Authentication):
@@ -81,7 +85,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 	__password: str
 	__cookie_session: Optional[str]
 	__cookie_auth: Optional[str]
-	__operation_error: Optional[int]
+	__operation_error: Optional[Tuple[int, str]]
 	
 	def __init__(self, email, password):
 		self.__email = email
@@ -106,20 +110,20 @@ class AuthenticationByEmailAndPassword(Authentication):
 	def __check_validation_email(self) -> bool:
 		"""Проверяет полученный email на валидность. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationEmail(self.__email).get_result()):
-			self.__set_operation_error(EnumErrors.NOT_VALID_EMAIL)
+			self.__set_operation_error(enum_error=ValidationErrors.NOT_VALID_EMAIL, type_error="validation")
 		return result
 	
 	def __check_validation_password(self) -> bool:
 		"""Проверяет полученный пароль на валидность. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationPassword(self.__password).get_result()):
-			self.__set_operation_error(EnumErrors.NOT_VALID_PASSWORD)
+			self.__set_operation_error(enum_error=ValidationErrors.NOT_VALID_PASSWORD, type_error="validation")
 		return result
 	
 	def __get_user_id_from_db(self, hashed_password: str) -> Optional[int]:
 		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
 		user_id = user_db.get_user_id((self.__email, hashed_password))
 		if user_id is None:
-			self.__set_operation_error(EnumErrors.NOT_USER)
+			self.__set_operation_error(enum_error=AuthErrors.NOT_USER, type_error="user_auth")
 		return user_id
 	
 	def __set_cookie_session(self, user_id: int) -> None:
@@ -138,13 +142,13 @@ class AuthenticationByEmailAndPassword(Authentication):
 		"""Получает куки авторизации."""
 		return self.__cookie_auth
 			
-	def __set_operation_error(self, error_type: EnumErrors) -> None:
+	def __set_operation_error(self, enum_error: Enum, type_error: str) -> None:
 		"""Устанавливает ошибку операции."""
-		self.__operation_error = error_type.value
+		self._operation_error = enum_error.value, type_error
 
-	def get_operation_error(self) -> Optional[int]:
+	def get_operation_error(self) -> Optional[Tuple[int, str]]:
 		"""Получает ошибку операции."""
-		return self.__operation_error
+		return self._operation_error
 
 
 class AuthenticationByCookieSession(Authentication):
