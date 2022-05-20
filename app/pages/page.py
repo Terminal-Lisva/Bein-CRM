@@ -141,35 +141,3 @@ class PageWithPermitView(Page):
         page_uri = get_current_page_uri()
         permit = page_db.get_permit_view_page(user_id, page_uri)
         return permit
-
-
-class PageAvailableWithSideMenu(PageAvailable):
-    """Страница доступная с боковым меню"""
-
-    def __init__(self, template: str):
-        constructor = ConstructorPageTemplateWithSideMenu(template)
-        super().__init__(constructor)
-
-
-class PageAvailableWithoutSideMenu(PageAvailable):
-    """Страница доступная без бокового меню"""
-
-    def __init__(self, template: str):
-        constructor = ConstructorPageTemplateWithoutSideMenu(template)
-        super().__init__(constructor)
-
-
-class PageWithPermitViewWithSideMenu(PageWithPermitView):
-    """Страница с боковым меню с разрешением на ее просмотр """
-
-    def __init__(self, template: str):
-        constructor = ConstructorPageTemplateWithSideMenu(template)
-        super().__init__(constructor)
-
-
-class PageWithPermitViewWithoutSideMenu(PageWithPermitView):
-    """Страница без бокового меню с разрешением на ее просмотр"""
-
-    def __init__(self, template: str):
-        constructor = ConstructorPageTemplateWithoutSideMenu(template)
-        super().__init__(constructor)

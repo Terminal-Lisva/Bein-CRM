@@ -19,8 +19,8 @@ class EnumErrors(Enum):
     USER_IS_NOT_BD = 7
 
 
-class HandlerResponse(ABC):
-	"""Обработчик ответа"""
+class HandlerRequest(ABC):
+	"""Обработчик запроса"""
 
 	_operation_error: Optional[int]
 
@@ -28,17 +28,17 @@ class HandlerResponse(ABC):
 		self._operation_error = None
 
 	@abstractmethod
-	def get_response(self) -> Optional[Union[bool, Tuple[str]]]:
-		"""Получает соответствующий ответ."""
+	def handle(self) -> Optional[Union[bool, Tuple[str]]]:
+		"""Обрабатывает соответствующий запрос."""
 		raise NotImplementedError()
 
-	def _check_validation_value(self, value: str, validation: Validation, error_type: EnumErrors):
+	def _check_validation_value(self, value: str, validation: Validation, error_type: Enum):
 		"""Проверяет значение на валидацию."""
 		if not (result := validation(value).get_result()):
 			self._set_operation_error(error_type)
 		return result
 
-	def _set_operation_error(self, error_type: EnumErrors) -> None:
+	def _set_operation_error(self, error_type: Enum) -> None:
 		"""Устанавливает ошибку операции."""
 		self._operation_error = error_type.value
 
@@ -47,8 +47,8 @@ class HandlerResponse(ABC):
 		return self._operation_error
 
 
-class HandlerResponseUserRegistrationData(HandlerResponse):
-	"""Обработчик ответа - данные для регистрации пользователя"""
+class HandlerRequestToGetUserDataForRegistration(HandlerRequest):
+	"""Обработчик запроса на получение данных для регистрации пользователя"""
 	
 	__invitation_token: str
 
@@ -56,8 +56,8 @@ class HandlerResponseUserRegistrationData(HandlerResponse):
 		super().__init__()
 		self.__invitation_token = request_data["invitation_token"]
 
-	def get_response(self) -> Optional[Tuple[str]]:
-		"""Получает данные пользователя для регистрации."""
+	def handle(self) -> Optional[Tuple[str]]:
+		"""Обрабатывает запрос на получение данных для регистрации."""
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
@@ -75,8 +75,8 @@ class HandlerResponseUserRegistrationData(HandlerResponse):
 		return user_data	
 
 
-class HandlerResponseAboutUserRegistration(HandlerResponse):
-	"""Обработчик ответ о регистрации пользователя"""
+class HandlerRequestUserRegistration(HandlerRequest):
+	"""Обработчик запроса на регистрацию пользователя"""
 
 	__invitation_token: str
 	__password: str
@@ -88,8 +88,8 @@ class HandlerResponseAboutUserRegistration(HandlerResponse):
 		self.__password = request_data["password"]
 		self.__hashing_data = HashingData()
 
-	def get_response(self) -> bool:
-		"""Получает результат регистрации пользователя."""
+	def handle(self) -> bool:
+		"""Обрабатывает запрос на регистрацию пользователя."""
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
@@ -124,8 +124,8 @@ class HandlerResponseAboutUserRegistration(HandlerResponse):
 		return True
 
 
-class HandlerResponseAboutUserRestore(HandlerResponse):
-	"""Обработчик ответа о восстановлении пользователя"""
+class HandlerRequestUserRestore(HandlerRequest):
+	"""Обработчик запроса на восстановление пользователя"""
 
 	__invitation_token: str
 	__user_name: str
@@ -139,8 +139,8 @@ class HandlerResponseAboutUserRestore(HandlerResponse):
 		self.__new_password = request_data["new_password"]
 		self.__hashing_data = HashingData()
 
-	def get_response(self) -> bool:
-		"""Получает результат восстановления пользователя."""
+	def handle(self) -> bool:
+		"""Обрабатывает запрос на восстановление пользователя."""
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
@@ -189,7 +189,7 @@ class HandlerResponseAboutUserRestore(HandlerResponse):
 		return True
 
 
-Handler = TypeVar("Handler", bound=HandlerResponse)
+Handler = TypeVar("Handler", bound=HandlerRequest)
 
 
 class UserRegistrationPage:
@@ -207,7 +207,7 @@ class UserRegistrationPage:
 		if self.__request_data is None:
 			return error_response(code_error=2, type_error="app")
 		handler = self.__handler(self.__request_data)
-		response = handler.get_response()
+		response = handler.handle()
 		if not response:
 			code_error = handler.get_operation_error()
 			return error_response(code_error, type_error="auth")

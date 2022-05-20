@@ -1,7 +1,7 @@
 from app import app
 from flask import request, typing as flaskTyping
 from pages.page_funcs import get_request_data, error_response, delete_cookies
-from pages.user_registration_page import UserRegistrationPage, HandlerResponseUserRegistrationData, HandlerResponseAboutUserRegistration, HandlerResponseAboutUserRestore
+from pages.user_registration_page import UserRegistrationPage, HandlerRequestToGetUserDataForRegistration, HandlerRequestUserRegistration, HandlerRequestUserRestore
 from pages.user_authorization_page import UserAuthorizationPage
 from pages.app_page import AppPage
 from pages.account_page import AccountPage
@@ -13,7 +13,7 @@ def get_data_for_user_registration() -> flaskTyping.ResponseReturnValue:
 	"""Получает данные для регистрации пользователя."""
 	if request.method == "POST":
 		request_data = get_request_data(["invitation_token"])
-		user_registration_page = UserRegistrationPage(HandlerResponseUserRegistrationData, request_data)
+		user_registration_page = UserRegistrationPage(HandlerRequestToGetUserDataForRegistration, request_data)
 		return user_registration_page.get_response()
 	return error_response(code_error=1, type_error="app")
 
@@ -22,7 +22,7 @@ def registers_user() -> flaskTyping.ResponseReturnValue:
 	"""Регистрирует пользователя."""
 	if request.method == "POST":
 		request_data = get_request_data(["invitation_token", "password"])
-		user_registration_page = UserRegistrationPage(HandlerResponseAboutUserRegistration, request_data)
+		user_registration_page = UserRegistrationPage(HandlerRequestUserRegistration, request_data)
 		return user_registration_page.get_response()
 	return error_response(code_error=1, type_error="app")
 
@@ -31,7 +31,7 @@ def restores_user_password() -> flaskTyping.ResponseReturnValue:
 	"""Восстанавливает пароль пользователя."""
 	if request.method == "POST":
 		request_data = get_request_data(["invitation_token", "user_name", "new_password"])
-		user_registration_page = UserRegistrationPage(HandlerResponseAboutUserRestore, request_data)
+		user_registration_page = UserRegistrationPage(HandlerRequestUserRestore, request_data)
 		return user_registration_page.get_response()
 	return error_response(code_error=1, type_error="app")
 
