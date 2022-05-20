@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from flask import typing as flaskTyping
-from service_layer.authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
+from service_layer.authentication import Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
 from .page_funcs import get_request_data, get_cookie, make_success_response, add_cookies_to_response, error_response, redirect_response, add_cookie_session_to_response, template_response, delete_cookies
 from itertools import filterfalse
 

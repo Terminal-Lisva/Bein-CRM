@@ -1,12 +1,9 @@
-from .page import 
+from .response_from_page import HandlerRequest
 from enum import Enum
-from abc import ABC, abstractmethod
-from typing import Type, TypeVar, Optional, Dict, Union, Tuple
-from utilities.validations import Validation, ValidationInvitationToken, ValidationPassword, ValidationFIO
+from typing import Dict, Optional, Tuple
+from utilities.validations import ValidationInvitationToken, ValidationPassword, ValidationFIO
 from database import user_db
 from utilities.other import HashingData, records_log_user_registration, records_log_user_restorer
-from flask import typing as flaskTyping
-from .page_funcs import get_request_data, success_response, error_response
 
 
 class EnumErrors(Enum):
@@ -18,34 +15,6 @@ class EnumErrors(Enum):
     NOT_USER_NAME = 5
     USER_IS_BD = 6
     USER_IS_NOT_BD = 7
-
-
-class HandlerRequest(ABC):
-	"""Обработчик запроса"""
-
-	_operation_error: Optional[int]
-
-	def __init__(self):
-		self._operation_error = None
-
-	@abstractmethod
-	def handle(self) -> Optional[Union[bool, Tuple[str]]]:
-		"""Обрабатывает соответствующий запрос."""
-		raise NotImplementedError()
-
-	def _check_validation_value(self, value: str, validation: Validation, error_type: Enum):
-		"""Проверяет значение на валидацию."""
-		if not (result := validation(value).get_result()):
-			self._set_operation_error(error_type)
-		return result
-
-	def _set_operation_error(self, error_type: Enum) -> None:
-		"""Устанавливает ошибку операции."""
-		self._operation_error = error_type.value
-
-	def get_operation_error(self) -> Optional[int]:
-		"""Получает ошибку операции."""
-		return self._operation_error
 
 
 class HandlerRequestToGetUserDataForRegistration(HandlerRequest):
@@ -184,28 +153,3 @@ class HandlerRequestUserRestore(HandlerRequest):
 		hashed_new_pas = HashingData().calculate_hash(self.__new_password)
 		user_db.add_user_authentication(user_id, hashed_new_pas)
 		return True
-
-
-Handler = TypeVar("Handler", bound=HandlerRequest)
-
-
-class UserRegistrationPage:
-	"""Страница регистрации пользователя"""
-
-	__handler: Type[Handler]
-	__request_data: Optional[Dict[str, str]]
-
-	def __init__(self, handler, request_data):
-		self.__handler = handler
-		self.__request_data = request_data
-
-	def get_response(self) -> flaskTyping.ResponseReturnValue:
-		"""Получает ответ от страницы."""
-		if self.__request_data is None:
-			return error_response(code_error=2, type_error="app")
-		handler = self.__handler(self.__request_data)
-		response = handler.handle()
-		if not response:
-			code_error = handler.get_operation_error()
-			return error_response(code_error, type_error="auth")
-		return success_response(value=response)
