@@ -70,10 +70,6 @@ body {
     padding-left: 30px;
 }
 
-.item-menu-icon {
-    margin-right: 1rem;
-}
-
 .item-sidebar {
     background-color: #343a40;
 }
@@ -82,11 +78,11 @@ body {
     background-color: rgb(33, 37, 41);
 }
 
-.sidebar-submenu {
-    font-size: 0.9rem;
+.item-sidebar-icon {
+    margin-right: 1rem;
 }
 
-.item-menu-icons-arrow {
+.item-sidebar-icons-arrow {
     padding-left: 10px;
     margin-left: auto;
 }
@@ -95,7 +91,7 @@ body {
 #sidebar-container
     .list-group
     .list-group-item[aria-expanded="false"]
-    .item-menu-icons-arrow
+    .item-sidebar-icons-arrow
     .ico-arrow {
     height: 12px;
     width: 12px;
@@ -106,9 +102,13 @@ body {
 #sidebar-container
     .list-group
     .list-group-item[aria-expanded="true"]
-    .item-menu-icons-arrow
+    .item-sidebar-icons-arrow
     .ico-arrow {
     height: 12px;
     width: 12px;
     background-image: url("data:image/svg+xml,<svg viewBox='0 0 14 14' fill='%23fff' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z' clip-rule='evenodd'/></svg>");
+}
+
+.sidebar-submenu {
+    font-size: 0.9rem;
 }

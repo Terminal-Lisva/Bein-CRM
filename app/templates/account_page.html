@@ -1,1 +1,39 @@
-{% extends "content.html" %} {% block page %} {% endblock %}
+{% extends "content.html" %} {% block page %}
+<div class="row align-items-center">
+    <div class="col-12 col-md-6">
+        <table class="table align-middle table-borderless">
+            <tbody>
+                <tr>
+                    <td>Email:</td>
+                    <td>{{ data['user_data'][3] }}</td>
+                </tr>
+                <tr>
+                    <td>Пароль:</td>
+                    <td>
+                        <button type="button" class="btn btn-secondary">
+                            Изменить пароль
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Фамилия:</td>
+                    <td>{{ data['user_data'][0] }}</td>
+                </tr>
+                <tr>
+                    <td>Имя:</td>
+                    <td>{{ data['user_data'][1] }}</td>
+                </tr>
+                <tr>
+                    <td>Отчество:</td>
+                    <td>{{ data['user_data'][2] }}</td>
+                </tr>
+                <tr>
+                    <td>Компания:</td>
+                    <td>{{ data['user_data'][4] }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

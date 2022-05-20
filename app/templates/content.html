@@ -50,8 +50,7 @@
                    'Целеполагание': 'M16 2a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9.586a1 1 0 0 1 .707.293l2.853 2.853a.5.5 0 0 0 .854-.353V2zM3.5 3h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1 0-1zm0 2.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1z'                   
                 } %}
                 {% set side_menu_data = data['side_menu_data'] %} 
-                {% set global_id = '0' %}
-                <div class="accordion" id="accordion{{ global_id }}">
+                <div class="accordion" id="accordion-submenu">
                     {% macro render_tree(side_menu_data, id) -%} 
                     {% for i in range(side_menu_data|count) %} 
                     {% set name = side_menu_data[i]['name'] %} 
@@ -68,34 +67,34 @@
                         <div
                             class="d-flex w-100 justify-content-start align-items-center"
                         >
-                            <span class="item-menu-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-graph-up-arrow" viewBox="0 0 18 18">
+                            <span class="item-sidebar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-graph-up-arrow" viewBox="0 0 18 18">
                                 <path fill-rule="evenodd" d="{{ icon_codes[name] }}"/>
                               </svg></span>
-                            <span class="item-menu-name">{{ name }}</span>
-                            <span class="item-menu-icons-arrow">
+                            <span class="item-sidebar-name">{{ name }}</span>
+                            <span class="item-sidebar-icons-arrow">
                                 <div class="ico-arrow"></div>
                             </span>
                         </div>
                     </a>
                     <!-- Submenu content -->
-                    <div id="submenu{{ new_id }}" class="collapse sidebar-submenu" data-bs-parent="#accordion{{ global_id }}">
+                    <div id="submenu{{ new_id }}" class="collapse sidebar-submenu" data-bs-parent="#accordion-submenu">
                     {{- render_tree(side_menu_data[i]['children'], new_id) -}}
                     </div>
                     {% elif id != '0' %}
                     <a href="{{ href }}" class="item-sidebar list-group-item collapsed">
-                        <span class="item-menu-name">{{ name }}</span>
+                        <span class="item-sidebar-name">{{ name }}</span>
                     </a>
                     {% else %}
                     <a href="{{ href }}" class="item-sidebar list-group-item collapsed">
                         <div class="d-flex w-100 justify-content-start align-items-center">
                             <span class="fa fa-calendar fa-fw mr-3"></span>
-                            <span class="item-menu-name">{{ name }}</span>
+                            <span class="item-sidebar-name">{{ name }}</span>
                         </div>
                     </a>
                     {% endif %} 
                     {% endfor %} 
                     {%- endmacro %} 
-                    {{ render_tree(side_menu_data, global_id) }}
+                    {{ render_tree(side_menu_data, '0') }}
                 </div>  
             <!-- List Group END-->
         </div>

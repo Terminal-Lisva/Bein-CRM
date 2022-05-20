@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from flask import typing as flaskTyping
-from service_layer.user_authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
+from service_layer.authentication import UserAuthenticationInfo, Authentication, AuthenticationByEmailAndPassword, AuthenticationByCookieSession, AuthenticationByCookieAuth
 from .page_funcs import get_request_data, get_cookie, make_success_response, add_cookies_to_response, error_response, redirect_response, add_cookie_session_to_response, template_response, delete_cookies
 from itertools import filterfalse
 
@@ -118,15 +118,9 @@ class UserAuthorizationPage:
 		cookie_session_handler = CookieSessionHandler(cookie_auth_handler)
 		email_and_password_handler = EmailAndPasswordHandler(cookie_session_handler)
 		email_and_password_handler.handle()
-		#находим ответ из обработчиков
+		#Находим ответ из обработчиков
 		handlers = [email_and_password_handler, cookie_session_handler, cookie_auth_handler, last_handler]
 		for handler in filterfalse(
 				lambda handler: handler.response is None, 
 				handlers):
 			return handler.response
-
-	def get_response_about_remove_authorization(self) -> flaskTyping.ResponseReturnValue:
-		"""Получает ответ об удалении авторизации."""
-		response = make_success_response(value=True)
-		delete_cookies(response)
-		return response

@@ -7,3 +7,5 @@ class AccountPage(PageAvailableWithSideMenu):
 
     def __init__(self):
         super().__init__(template='account_page.html')
+    
+    

@@ -2,7 +2,7 @@ from typing import Any, List, Dict, Union, Optional, Tuple
 from abc import ABC, abstractmethod
 from flask import typing as flaskTyping
 from .page_funcs import template_response, get_current_page_uri, get_cookie, add_cookie_session_to_response
-from service_layer.user_authentication import UserAuthenticationInfo, AuthenticationByCookies
+from service_layer.authentication import UserAuthenticationInfo, AuthenticationByCookies
 from database import page_db, user_db
 
 
@@ -15,7 +15,7 @@ class ConstructorPageTemplate(ABC):
         self._template = template
 
     @abstractmethod
-    def creates() -> flaskTyping.ResponseReturnValue:
+    def creates(self, kwargs: Dict[str, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу."""
         raise NotImplementedError()
 
@@ -37,7 +37,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
             data = {
                 'side_menu_data': side_menu_data,
                 'user_data': user_data,
-                'supplement': kwargs.get('page_uri', None)
+                'supplement': kwargs.get('supplement', None)
             }
         )
         return page
