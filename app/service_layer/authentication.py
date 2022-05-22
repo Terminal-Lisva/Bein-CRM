@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
-from .cookies import CookieError, GetterDataFromCookies, GetterDataFromCookieSession, GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth
+from .cookies import (CookieError, GetterDataFromCookies,
+GetterDataFromCookieSession, GetterDataFromCookieAuth, CreatorCookieSession,
+CreatorCookieAuth)
 from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
 from utilities.validations import ValidationEmail, ValidationPassword
@@ -14,7 +16,7 @@ class GetterUserIDFromCookies(ABC):
 
 	def __init__(self, data_from_cookie):
 		self._data_from_cookie = data_from_cookie()
-	
+
 	@abstractmethod
 	def get(self, cookie: str) -> Optional[int]:
 		"""Получает id пользователя из куки."""
@@ -25,8 +27,8 @@ class GetterUserIDFromCookieSession(GetterUserIDFromCookies):
 	"""Класс для получения ID пользователя из куки сессии"""
 
 	def __init__(self):
-		super().__init__(GetterDataFromCookieSession) 
-	
+		super().__init__(GetterDataFromCookieSession)
+
 	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки сессии."""
 		if cookie is None:
@@ -60,7 +62,7 @@ class GetterUserIDFromCookieAuth(GetterUserIDFromCookies):
 
 class Authentication(ABC):
 	"""Аутентификация пользователя"""
-	
+
 	@abstractmethod
 	def authenticates_user(self) -> Optional[int]:
 		"""Аутентифицирует пользователя."""
@@ -68,14 +70,14 @@ class Authentication(ABC):
 
 
 class ValidationErrors(Enum):
-    """Ошибки валидации"""
-    NOT_VALID_PASSWORD = 2
+	"""Ошибки валидации"""
+	NOT_VALID_PASSWORD = 2
 	NOT_VALID_EMAIL = 5
 
 
-class AuthErrors(Enum):
-    """Ошибки авторизации"""
-    NOT_USER = 1
+class NoDataErrors(Enum):
+	"""Ошибки отсутствия данных"""
+	NO_USER = 4
 
 
 class AuthenticationByEmailAndPassword(Authentication):
@@ -85,8 +87,8 @@ class AuthenticationByEmailAndPassword(Authentication):
 	__password: str
 	__cookie_session: Optional[str]
 	__cookie_auth: Optional[str]
-	__operation_error: Optional[Tuple[int, str]]
-	
+	__operation_error: Optional[Tuple[str, str, int]]
+
 	def __init__(self, email, password):
 		self.__email = email
 		self.__password = password
@@ -96,57 +98,72 @@ class AuthenticationByEmailAndPassword(Authentication):
 
 	def authenticates_user(self) -> Optional[int]:
 		"""Аутентифицирует пользователя."""
-		if not self.__check_validation_email() or not self.__check_validation_password(): 
+		if (not self.__check_validation_email()
+			or not self.__check_validation_password()):
 			return None
 		hashed_password = HashingData().calculate_hash(self.__password)
 		user_id = self.__get_user_id_from_db(hashed_password)
-		if user_id is None: 
+		if user_id is None:
 			return None
 		self.__set_cookie_session(user_id)
 		self.__set_cookie_auth(hashed_password)
 		records_log_user_authentication(user_id, type_auth='Email&Password')
 		return user_id
-	
+
 	def __check_validation_email(self) -> bool:
-		"""Проверяет полученный email на валидность. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
+		"""Проверяет полученный email на валидность. В случае отрицательного
+		результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationEmail(self.__email).get_result()):
-			self.__set_operation_error(enum_error=ValidationErrors.NOT_VALID_EMAIL, type_error="validation")
+			self.__set_operation_error(
+				source="email",
+				type="VALIDATION",
+				enum=ValidationErrors.NOT_VALID_EMAIL)
 		return result
-	
+
 	def __check_validation_password(self) -> bool:
-		"""Проверяет полученный пароль на валидность. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
+		"""Проверяет полученный пароль на валидность. В случае отрицательного
+		результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationPassword(self.__password).get_result()):
-			self.__set_operation_error(enum_error=ValidationErrors.NOT_VALID_PASSWORD, type_error="validation")
+			self.__set_operation_error(
+				source="password",
+				type="VALIDATION",
+				enum=ValidationErrors.NOT_VALID_PASSWORD)
 		return result
-	
+
 	def __get_user_id_from_db(self, hashed_password: str) -> Optional[int]:
-		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
+		"""Получает id пользователя из базы данных.
+		Если пользователь отсутствует в базе данных устанавливает
+		соответствующую ошибку операции."""
 		user_id = user_db.get_user_id((self.__email, hashed_password))
 		if user_id is None:
-			self.__set_operation_error(enum_error=AuthErrors.NOT_USER, type_error="user_auth")
+			self.__set_operation_error(
+				source="user is not registered",
+				type="NO_DATA",
+				enum=NoDataErrors.NO_USER)
 		return user_id
-	
+
 	def __set_cookie_session(self, user_id: int) -> None:
 		"""Устанавливает куки сессии."""
 		self.__cookie_session = CreatorCookieSession().creates(user_id)
-	
+
 	def get_cookie_session(self) -> Optional[str]:
 		"""Получает куки сессии."""
 		return self.__cookie_session
-	
+
 	def __set_cookie_auth(self, hashed_password: str) -> None:
 		"""Устанавливает куки авторизации."""
-		self.__cookie_auth = CreatorCookieAuth().creates(self.__email, hashed_password)
-	
+		self.__cookie_auth = CreatorCookieAuth().creates(
+			self.__email, hashed_password)
+
 	def get_cookie_auth(self) -> Optional[str]:
 		"""Получает куки авторизации."""
 		return self.__cookie_auth
-			
-	def __set_operation_error(self, enum_error: Enum, type_error: str) -> None:
-		"""Устанавливает ошибку операции."""
-		self._operation_error = enum_error.value, type_error
 
-	def get_operation_error(self) -> Optional[Tuple[int, str]]:
+	def __set_operation_error(self, source: str, type: str, enum: Enum) -> None:
+		"""Устанавливает ошибку операции."""
+		self._operation_error = source, type, enum.value
+
+	def get_operation_error(self) -> Optional[Tuple[str, str, int]]:
 		"""Получает ошибку операции."""
 		return self._operation_error
 
@@ -158,7 +175,7 @@ class AuthenticationByCookieSession(Authentication):
 
 	def __init__(self, cookie_session):
 		self.__cookie_session = cookie_session
-	
+
 	def authenticates_user(self) -> Optional[int]:
 		"""Аутентифицирует пользователя."""
 		user_id = GetterUserIDFromCookieSession().get(self.__cookie_session)
@@ -166,7 +183,7 @@ class AuthenticationByCookieSession(Authentication):
 			return None
 		records_log_user_authentication(user_id, type_auth='CookieSession')
 		return user_id
-			
+
 
 class AuthenticationByCookieAuth(Authentication):
 	"""Аутентификация пользователя по куке авторизации"""
@@ -186,7 +203,7 @@ class AuthenticationByCookieAuth(Authentication):
 		self.__set_cookie_session(user_id)
 		records_log_user_authentication(user_id, type_auth='CookieAuth')
 		return user_id
-	
+
 	def __set_cookie_session(self, user_id: int) -> None:
 		"""Устанавливает куки сессии."""
 		self.__cookie_session = CreatorCookieSession().creates(user_id)
@@ -205,18 +222,20 @@ class AuthenticationByCookies(Authentication):
 	def __init__(self, cookie_session, cookie_auth):
 		self.__cookie_session = cookie_session
 		self.__cookie_auth = cookie_auth
-	
+
 	def authenticates_user(self) -> Optional[int]:
 		"""Аутентифицирует пользователя."""
-		user_id_from_cookie_session = GetterUserIDFromCookieSession().get(self.__cookie_session)
+		user_id_from_cookie_session = GetterUserIDFromCookieSession().get(
+			self.__cookie_session)
 		if user_id_from_cookie_session is not None:
 			return user_id_from_cookie_session
-		user_id_from_cookie_auth = GetterUserIDFromCookieAuth().get(self.__cookie_auth)
+		user_id_from_cookie_auth = GetterUserIDFromCookieAuth().get(
+			self.__cookie_auth)
 		if user_id_from_cookie_auth is None:
 			return None
 		self.__set_cookie_session(user_id_from_cookie_auth)
 		return user_id_from_cookie_auth
-	
+
 	def __set_cookie_session(self, user_id: int) -> None:
 		"""Устанавливает куки сессии."""
 		self.__cookie_session = CreatorCookieSession().creates(user_id)

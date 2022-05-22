@@ -1,14 +1,20 @@
+from enum import Enum
 from abc import ABC, abstractmethod
 from typing import Optional, Union, Tuple
 from utilities.validations import Validation
-from enum import Enum
+from .service_layer.user import User
 
 
 #Логика получения ответа от страницы:
+class Errors(Enum):
+	"""Ошибки"""
+	NO_AUTHENTICATION = 1
+
+
 class HandlerRequest(ABC):
 	"""Базовый класс - Обработчик запроса"""
 
-	_operation_error: Optional[Tuple[int, str]]
+	_operation_error: Optional[Tuple[str, str, int]]
 
 	def __init__(self):
 		self._operation_error = None
@@ -18,36 +24,42 @@ class HandlerRequest(ABC):
 		"""Обрабатывает соответствующий запрос."""
 		raise NotImplementedError()
 
-	def _check_validation_value(self, value: str, validation: Validation, enum_error: Enum, type_error: str):
+	def _check_validation_value(
+		self,
+		value: str,
+		validation: Validation,
+		source: str,
+		type: str,
+		enum: Enum
+		) -> bool:
 		"""Проверяет значение на валидацию."""
 		if not (result := validation(value).get_result()):
-			self._set_operation_error(enum_error, type_error)
+			self._set_operation_error(source, type, enum)
 		return result
 
-	def _set_operation_error(self, enum_error: Enum, type_error: str) -> None:
+	def _set_operation_error(self, source: str, type: str, enum: Enum) -> None:
 		"""Устанавливает ошибку операции."""
-		self._operation_error = enum_error.value, type_error
+		self._operation_error = source, type, enum.value
 
-	def get_operation_error(self) -> Optional[Tuple[int, str]]:
+	def get_operation_error(self) -> Optional[Tuple[str, str, int]]:
 		"""Получает ошибку операции."""
 		return self._operation_error
 
 
-class AppErrors(Enum):
-	"""Ошибки приложения"""
-	NOT_AUTHENTICATION = 3
+class HandlerWithUser(HandlerRequest):
+	"""Обработчик запроса с пользователем"""
 
+	def __init__(self):
+		super().__init__()
+		self._user = User()
 
-class HandlerWithAuthentication(HandlerRequest):
-    """Обработчик запроса с аутентификацией"""
-
-    def __init__(self):
-        super().__init__()
-        self.__authentication_info = AuthenticationInfo()
-
-    def _get_user_id(self) -> Optional[int]:
-        """Получает id пользователя из информации аутентификации. Если пользователь отсутствует устанавливает соответствующую ошибку операции."""
-        user_id = self.__authentication_info.user_id
-		if user_id is None:
-			self._set_operation_error(error_type=AppErrors.NOT_AUTHENTICATION, type_error="app")
-		return user_id
+	def _check_authentication_user(self) -> bool:
+		"""Проверяет аутентификацию пользователя. Если аутентификация
+		отсутствует устанавливает соответствующую ошибку операции."""
+		if result := not self._user:
+			self._set_operation_error(
+				source="CookieSession/CookieAuth",
+				type="REQUEST_AUTH",
+				enum=Errors.NO_AUTHENTICATION
+			)
+		return result

@@ -1,29 +1,36 @@
 from .response_from_page import HandlerRequest
 from enum import Enum
 from typing import Dict, Optional, Tuple
-from utilities.validations import ValidationInvitationToken, ValidationPassword, ValidationFIO
+from utilities.validations import (ValidationInvitationToken,
+ValidationPassword, ValidationFIO)
 from database import user_db
-from utilities.other import HashingData, records_log_user_registration, records_log_user_restorer
+from utilities.other import (HashingData, records_log_user_registration,
+records_log_user_restorer)
 
 
 class ValidationErrors(Enum):
-    """Ошибки валидации"""
-    NOT_VALID_TOKEN = 1
-    NOT_VALID_PASSWORD = 2
-    NOT_VALID_USER_NAME = 4
-    
+	"""Ошибки валидации"""
+	NOT_VALID_TOKEN = 1
+	NOT_VALID_PASSWORD = 2
+	NOT_VALID_NEW_PASSWORD = 3
+	NOT_VALID_USER_NAME = 4
 
-class RegistrationErrors(Enum):
-	"""Ошибки регистрации пользователя"""
+
+class NoDataErrors(Enum):
+	"""Ошибки отсутсвия данных"""
 	NOT_TOKEN = 1
 	NOT_USER_NAME = 2
-	USER_IS_BD = 3
-    USER_IS_NOT_BD = 4
+	USER_IS_NOT_BD = 3
+
+
+class AlreadyDataErrors(Enum):
+	"""Ошибки в наличии данных"""
+	USER_IS_BD = 1
 
 
 class HandlerRequestToGetUserDataForRegistration(HandlerRequest):
 	"""Обработчик запроса на получение данных для регистрации пользователя"""
-	
+
 	__invitation_token: str
 
 	def __init__(self, request_data: Dict[str, str]):
@@ -35,19 +42,26 @@ class HandlerRequestToGetUserDataForRegistration(HandlerRequest):
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
-			enum_error=ValidationErrors.NOT_VALID_TOKEN,
-			type_error="validation"
+			source="InvitationToken",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_TOKEN
 			):
 			return None
 		user_data = self.__get_user_data_from_db()
 		return user_data
 
-	def __get_user_data_from_db(self) -> Optional[tuple]:
-		"""Получает данные пользователя из базы данных. Если данные пользователя отсутствуют устанавливает соответствующую ошибку операции."""
+	def __get_user_data_from_db(self) -> Optional[Tuple[str]]:
+		"""Получает данные пользователя из базы данных.
+		Если данные пользователя отсутствуют
+		устанавливает соответствующую ошибку операции."""
 		user_data = user_db.get_user_data(self.__invitation_token)
 		if user_data is None:
-			self._set_operation_error(enum_error=RegistrationErrors.NOT_TOKEN, type_error="user_reg")
-		return user_data	
+			self._set_operation_error(
+				source="InvitationToken",
+				type="NO_DATA",
+				enum=NoDataErrors.NOT_TOKEN
+			)
+		return user_data
 
 
 class HandlerRequestUserRegistration(HandlerRequest):
@@ -66,13 +80,15 @@ class HandlerRequestUserRegistration(HandlerRequest):
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
-			enum_error=ValidationErrors.NOT_VALID_TOKEN,
-			type_error="validation"
+			source="InvitationToken",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_TOKEN
 			) or not self._check_validation_value(
 			value=self.__password,
 			validation=ValidationPassword,
-			enum_error=ValidationErrors.NOT_VALID_PASSWORD,
-			type_error="validation"
+			source="password",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_PASSWORD
 			):
 			return False
 		user_id = self.__get_user_id_from_db()
@@ -81,18 +97,30 @@ class HandlerRequestUserRegistration(HandlerRequest):
 		result = self.__add_user_to_db(user_id)
 		if result: records_log_user_registration(user_id)
 		return result
-	
+
 	def __get_user_id_from_db(self) -> Optional[int]:
-		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
+		"""Получает id пользователя из базы данных.
+		Если пользователь отсутствует в базе данных
+		устанавливает соответствующую ошибку операции."""
 		user_id = user_db.get_user_id(self.__invitation_token)
 		if user_id is None:
-			self._set_operation_error(enum_error=RegistrationErrors.NOT_TOKEN, type_error="user_reg")
+			self._set_operation_error(
+				source="InvitationToken",
+				type="NO_DATA",
+				enum=NoDataErrors.USER_IS_NOT_BD
+			)
 		return user_id
-	
+
 	def __add_user_to_db(self, user_id: int) -> bool:
-		"""Добавляет пользователя в базу данных. Если пользователь уже имеется в базе данных устанавливает соответствующую ошибку операции."""
+		"""Добавляет пользователя в базу данных.
+		Если пользователь уже имеется в базе данных
+		устанавливает соответствующую ошибку операции."""
 		if not user_db.check_user_authentication(user_id):
-			self._set_operation_error(enum_error=RegistrationErrors.USER_IS_BD, type_error="user_reg")
+			self._set_operation_error(
+				source="InvitationToken",
+				type="ALREADY_DATA",
+				enum=AlreadyDataErrors.USER_IS_BD
+			)
 			return False
 		hashed_password = HashingData().calculate_hash(self.__password)
 		user_db.add_user_authentication(user_id, hashed_password)
@@ -117,18 +145,21 @@ class HandlerRequestUserRestore(HandlerRequest):
 		if not self._check_validation_value(
 			value=self.__invitation_token,
 			validation=ValidationInvitationToken,
-			enum_error=ValidationErrors.NOT_VALID_TOKEN,
-			type_error="validation"
+			source="InvitationToken",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_TOKEN
 			) or not self._check_validation_value(
 			value=self.__user_name,
 			validation=ValidationFIO,
-			enum_error=ValidationErrors.NOT_VALID_USER_NAME,
-			type_error="validation"
+			source="FIO",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_USER_NAME
 			) or not self._check_validation_value(
 			value=self.__new_password,
 			validation=ValidationPassword,
-			enum_error=ValidationErrors.NOT_VALID_PASSWORD,
-			type_error="validation"
+			source="password",
+			type="VALIDATION",
+			enum=ValidationErrors.NOT_VALID_NEW_PASSWORD
 			):
 			return False
 		user_id = self.__get_user_id_from_db()
@@ -139,25 +170,43 @@ class HandlerRequestUserRestore(HandlerRequest):
 		result = self.__restores_user_to_db(user_id)
 		if result: records_log_user_restorer(user_id)
 		return result
-	
+
 	def __get_user_id_from_db(self) -> Optional[int]:
-		"""Получает id пользователя из базы данных. Если пользователь отсутствует в базе данных устанавливает соответствующую ошибку операции."""
+		"""Получает id пользователя из базы данных.
+		Если пользователь отсутствует в базе данных
+		устанавливает соответствующую ошибку операции."""
 		user_id = user_db.get_user_id(self.__invitation_token)
 		if user_id is None:
-			self._set_operation_error(enum_error=RegistrationErrors.NOT_TOKEN, type_error="user_reg")
+			self._set_operation_error(
+				source="InvitationToken",
+				type="NO_DATA",
+				enum=NoDataErrors.USER_IS_NOT_BD
+			)
 		return user_id
-	
+
 	def __has_user_name_in_db(self, user_id: int) -> bool:
-		"""Проверяет полученное имя пользователя на соответствие с именем в базе данных. В случае отрицательного результата проверки устанавливает соответствующую ошибку операции."""
+		"""Проверяет полученное имя пользователя на соответствие
+		с именем в базе данных. В случае отрицательного результата проверки
+		устанавливает соответствующую ошибку операции."""
 		user_name = user_db.get_user_fio(user_id)
 		if not (result := self.__user_name == user_name):
-			self._set_operation_error(enum_error=RegistrationErrors.NOT_USER_NAME, type_error="user_reg")
+			self._set_operation_error(
+				source="FIO",
+				type="NO_DATA",
+				enum=NoDataErrors.NOT_USER_NAME
+			)
 		return result
 
 	def __restores_user_to_db(self, user_id: int) -> bool:
-		"""Восстанавливает пользователя в базе данных. Если пользователя нет в базе данных устанавливает соответствующую ошибку операции."""
+		"""Восстанавливает пользователя в базе данных.
+		Если пользователя нет в базе данных
+		устанавливает соответствующую ошибку операции."""
 		if user_db.check_user_authentication(user_id):
-			self._set_operation_error(enum_error=RegistrationErrors.USER_IS_NOT_BD, type_error="user_reg")
+			self._set_operation_error(
+				source="InvitationToken",
+				type="NO_DATA",
+				enum=NoDataErrors.USER_IS_NOT_BD
+			)
 			return False
 		user_db.remove_user_authentication(user_id)
 		hashed_new_password= HashingData().calculate_hash(self.__new_password)
