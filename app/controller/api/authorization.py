@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from flask import typing as flaskTyping
-from service_layer.authentication import (Authentication,
+from controller.service_layer.authentication import (Authentication,
 AuthenticationByEmailAndPassword, AuthenticationByCookieSession,
 AuthenticationByCookieAuth)
-from .page_funcs import (get_data_from_json, get_cookie, make_success_response,
-add_cookies_to_response, error_response)
+from controller import common
 from itertools import filterfalse
 
 
@@ -40,7 +39,7 @@ class EmailAndPasswordHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		request_data = get_data_from_json(keys=["email", "password"])
+		request_data = common.get_data_from_json(keys=["email", "password"])
 		if request_data is None:
 			return False
 		email = request_data["email"]
@@ -48,18 +47,17 @@ class EmailAndPasswordHandler(ResponseHandler):
 		authentication = AuthenticationByEmailAndPassword(email, password)
 		user_id = authentication.authenticates_user()
 		if user_id is not None:
-			self._response = make_success_response(
-				response={"value": True},
-				status_code=200
+			self._response = common.make_json_response(
+				{"message": "Сессия успешно установлена"}, 201
 			)
-			add_cookies_to_response(
+			common.add_cookies_to_response(
 				self._response,
 				cookie_session=authentication.get_cookie_session(),
 				cookie_auth=authentication.get_cookie_auth()
 			)
 		else:
-			source, type, code = authentication.get_operation_error()
-			self._response = error_response(source, type, code)
+			source_er, type_er, code_er = authentication.get_operation_error()
+			self._response = common.error_response(source_er, type_er, code_er)
 		return True
 
 
@@ -70,14 +68,13 @@ class CookieSessionHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		cookie_session = get_cookie("Session")
+		cookie_session = common.get_cookie("Session")
 		authentication = AuthenticationByCookieSession(cookie_session)
 		user_id = authentication.authenticates_user()
 		if user_id is None:
 			return False
-		self._response = make_success_response(
-			response={"value": True},
-			status_code=200
+		self._response = common.make_json_response(
+			{"message": "Сессия успешно установлена"}, 201
 		)
 		return True
 
@@ -89,16 +86,15 @@ class CookieAuthHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		cookie_auth = get_cookie("Auth")
+		cookie_auth = common.get_cookie("Auth")
 		authentication = AuthenticationByCookieAuth(cookie_auth)
 		user_id = authentication.authenticates_user()
 		if user_id is None:
 			return False
-		self._response = make_success_response(
-			response={"value": True},
-			status_code=200
+		self._response = common.make_json_response(
+			{"message": "Сессия успешно установлена"}, 201
 		)
-		add_cookies_to_response(
+		common.add_cookies_to_response(
 			self._response,
 			cookie_session=authentication.get_cookie_session()
 		)
@@ -112,17 +108,17 @@ class LastHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		self._response = error_response(
-			source="cookies", type="REQUEST_AUTH", code=1)
+		self._response = common.error_response(
+			source_error="cookies", type_error="REQUEST_AUTH", code_error=1)
 		return True
 
 
-class AuthPage:
-	"""Страница авторизации пользователя"""
+class Authorization:
+	"""Авторизации пользователя"""
 
-	def get_response_about_user_authentication(
+	def response_about_user_session(
 		self) -> flaskTyping.ResponseReturnValue:
-		"""Получает ответ об аутентификации пользователя."""
+		"""Ответ о сессии пользователя."""
 		last_handler = LastHandler()
 		cookie_auth_handler = CookieAuthHandler(last_handler)
 		cookie_session_handler = CookieSessionHandler(cookie_auth_handler)

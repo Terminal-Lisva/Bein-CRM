@@ -5,7 +5,7 @@
             <tbody>
                 <tr>
                     <td>Email:</td>
-                    <td>{{ data['user_data'][3] }}</td>
+                    <td>{{ data['user_data']['email'] }}</td>
                 </tr>
                 <tr>
                     <td>Пароль:</td>
@@ -17,19 +17,19 @@
                 </tr>
                 <tr>
                     <td>Фамилия:</td>
-                    <td>{{ data['user_data'][0] }}</td>
+                    <td>{{ data['user_data']['last_name'] }}</td>
                 </tr>
                 <tr>
                     <td>Имя:</td>
-                    <td>{{ data['user_data'][1] }}</td>
+                    <td>{{ data['user_data']['first_name'] }}</td>
                 </tr>
                 <tr>
                     <td>Отчество:</td>
-                    <td>{{ data['user_data'][2] }}</td>
+                    <td>{{ data['user_data']['patrotymic'] }}</td>
                 </tr>
                 <tr>
                     <td>Компания:</td>
-                    <td>{{ data['user_data'][4] }}</td>
+                    <td>{{ data['user_data'][] }}</td>
                 </tr>
             </tbody>
         </table>

@@ -12,4 +12,4 @@ app.logger = logging.getLogger('app_logger')
 
 
 #Load Routes
-from routes import *
+from views import *

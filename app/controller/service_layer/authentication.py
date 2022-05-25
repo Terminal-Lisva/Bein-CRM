@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
-from .cookies import (CookieError, GetterDataFromCookies,
-GetterDataFromCookieSession, GetterDataFromCookieAuth, CreatorCookieSession,
-CreatorCookieAuth)
+from .cookies import (CookieError, GetterDataFromCookieSession,
+GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth)
 from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
 from utilities.validations import ValidationEmail, ValidationPassword
@@ -12,13 +11,8 @@ from database import user_db
 class GetterUserIDFromCookies(ABC):
 	"""Базовый класс для получения ID пользователя из кук"""
 
-	_data_from_cookie: GetterDataFromCookies
-
-	def __init__(self, data_from_cookie):
-		self._data_from_cookie = data_from_cookie()
-
 	@abstractmethod
-	def get(self, cookie: str) -> Optional[int]:
+	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки."""
 		raise NotImplementedError()
 
@@ -26,15 +20,17 @@ class GetterUserIDFromCookies(ABC):
 class GetterUserIDFromCookieSession(GetterUserIDFromCookies):
 	"""Класс для получения ID пользователя из куки сессии"""
 
+	__data_from_cookie: GetterDataFromCookieSession
+
 	def __init__(self):
-		super().__init__(GetterDataFromCookieSession)
+		self.__data_from_cookie = GetterDataFromCookieSession()
 
 	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки сессии."""
 		if cookie is None:
 			return None
 		try:
-			user_id, hashed_user_id = self._data_from_cookie.get(cookie)
+			user_id, hashed_user_id = self.__data_from_cookie.get(cookie)
 		except CookieError:
 			return None
 		if hashed_user_id != HashingData().calculate_hash(user_id):
@@ -45,15 +41,17 @@ class GetterUserIDFromCookieSession(GetterUserIDFromCookies):
 class GetterUserIDFromCookieAuth(GetterUserIDFromCookies):
 	"""Класс для получения ID пользователя из куки авторизации"""
 
+	__data_from_cookie: GetterDataFromCookieAuth
+
 	def __init__(self):
-		super().__init__(GetterDataFromCookieAuth)
+		self.__data_from_cookie = GetterDataFromCookieAuth()
 
 	def get(self, cookie: Optional[str]) -> Optional[int]:
 		"""Получает id пользователя из куки авторизации."""
 		if cookie is None:
 			return None
 		try:
-			email, hashed_password = self._data_from_cookie.get(cookie)
+			email, hashed_password = self.__data_from_cookie.get(cookie)
 		except CookieError:
 			return None
 		user_id = user_db.get_user_id((email, hashed_password))
@@ -72,12 +70,12 @@ class Authentication(ABC):
 class ValidationErrors(Enum):
 	"""Ошибки валидации"""
 	NOT_VALID_PASSWORD = 2
-	NOT_VALID_EMAIL = 5
+	NOT_VALID_EMAIL = 3
 
 
 class NoDataErrors(Enum):
 	"""Ошибки отсутствия данных"""
-	NO_USER = 4
+	NO_USER = 3
 
 
 class AuthenticationByEmailAndPassword(Authentication):
@@ -115,7 +113,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 		результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationEmail(self.__email).get_result()):
 			self.__set_operation_error(
-				source="email",
+				source=f"Email: {self.__email}",
 				type="VALIDATION",
 				enum=ValidationErrors.NOT_VALID_EMAIL)
 		return result
@@ -125,7 +123,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 		результата проверки устанавливает соответствующую ошибку операции."""
 		if not (result := ValidationPassword(self.__password).get_result()):
 			self.__set_operation_error(
-				source="password",
+				source=f"Пароль: {self.__password}",
 				type="VALIDATION",
 				enum=ValidationErrors.NOT_VALID_PASSWORD)
 		return result
@@ -137,7 +135,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 		user_id = user_db.get_user_id((self.__email, hashed_password))
 		if user_id is None:
 			self.__set_operation_error(
-				source="user is not registered",
+				source=f"Email: {self.__email}, Пароль: {self.__password}",
 				type="NO_DATA",
 				enum=NoDataErrors.NO_USER)
 		return user_id

@@ -1,4 +1,6 @@
 env
+.mypy_cache
+.vscode
 app.egg-info
 __pycache__
 web_kard.db

@@ -1,10 +1,10 @@
-from typing import List, Optional, Dict,  Any, Union
+from typing import List, Optional, Dict, Any
 from flask import (request, typing as flaskTyping, jsonify, make_response,
-redirect, render_template)
+render_template)
 from utilities.errors import Errors
 
 
-#Вспомогательные функции для страниц (функционал Flask):
+#Вспомогательные функции API Flask:
 def get_data_from_json(keys: List[str]) -> Optional[Dict[str, str]]:
     """Получает данные запроса."""
     request_data = request.get_json(force=True, silent=True)
@@ -20,15 +20,11 @@ def get_data_from_url(args: List[str]) -> Optional[Dict[str, str]]:
     except Exception: #надо тестировать на тип исключения
         return None
 
-def get_cookie(name: str) -> Optional[str]:
-    """Получает соответствующую куку."""
-    return request.cookies.get(name)
-
-def success_response(
-    response: Dict[str, Any],
+def make_json_response(
+    response: dict,
     status_code: int) -> flaskTyping.ResponseReturnValue:
-    """Сообщение об успешном ответе."""
-    return jsonify(response), status_code
+    """Делает ответ в формате JSON."""
+    return make_response(jsonify(response), status_code)
 
 def error_response(
     source_error: str,
@@ -43,28 +39,13 @@ def error_response(
         "type": type_error,
         "message": message
     }
-    return jsonify(response), status_code
-
-def make_success_response(
-    response: Dict[str, Any],
-    status_code: int) -> flaskTyping.ResponseReturnValue:
-    """Сделать успешный ответ."""
-    return make_response(success_response(response, status_code))
-
-def redirect_response(to: str) -> flaskTyping.ResponseReturnValue:
-    """Перенаправление."""
-    return redirect(to), 302
-
-
-#def redirect_response
-#    """Перенаправляемый ответ."""
-#    return make_response()
+    return make_json_response(response, status_code)
 
 def template_response(
     template: str,
     data: Any = None) -> flaskTyping.ResponseReturnValue:
     """Шаблонный ответ."""
-    return make_response(render_template(template, data=data))
+    return make_response(render_template(template, data=data), 200)
 
 def add_cookies_to_response(
     response: flaskTyping.ResponseReturnValue,
@@ -79,12 +60,12 @@ def add_cookies_to_response(
             key='Auth', value=cookie_auth, max_age=60*60*24*30, httponly=True)
     return
 
+def get_cookie(name: str) -> Optional[str]:
+    """Получает соответствующую куку."""
+    return request.cookies.get(name)
+
 def delete_cookies(response: flaskTyping.ResponseReturnValue) -> None:
     """Удаляет куки."""
     response.delete_cookie('Session')
     response.delete_cookie('Auth')
     return
-
-def get_current_page_uri() -> str:
-    """Получает текущий URI страницы."""
-    return request.path
