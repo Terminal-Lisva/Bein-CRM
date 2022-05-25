@@ -17,15 +17,11 @@ def get_user_data(arg: Optional[Union[str, int]])-> List[Tuple[Any, ...]]:
 				END) as registration,
 				ud.last_name as last_name, ud.first_name as first_name,
 				ud.patronymic as patronymic, ud.email as email,
-				c.company_id as company_id
+				ud.company_id as company_id
 			FROM
 				user_data as ud
-			LEFT JOIN
+			JOIN
 				user_authorization as ua ON ua.user_id = ud.user_id
-			LEFT JOIN
-				company as c ON c.company_id = ud.company_id
-			LEFT JOIN
-				invitation_tokens as it ON it.user_id = ud.user_id
 		"""
 		cursor.execute(query)
 		return cursor.fetchall()
@@ -45,14 +41,12 @@ def _get_user_data_by_invitation_token(
 				END) as registration,
 				ud.last_name as last_name, ud.first_name as first_name,
 				ud.patronymic as patronymic, ud.email as email,
-				c.company_id as company_id
+				ud.company_id as company_id
 			FROM
 				user_data as ud
-			LEFT JOIN
+			JOIN
 				user_authorization as ua ON ua.user_id = ud.user_id
-			LEFT JOIN
-				company as c ON c.company_id = ud.company_id
-			LEFT JOIN
+			JOIN
 				invitation_tokens as it ON it.user_id = ud.user_id
 			WHERE
 				it.invitation_token = ?
@@ -62,8 +56,7 @@ def _get_user_data_by_invitation_token(
 		return response_from_db
 
 @get_user_data.register(int)
-def _get_user_data_by_user_id(
-	user_id: int) -> Optional[Tuple[Any, ...]]:
+def _get_user_data_by_user_id(user_id: int) -> Optional[Tuple[Any, ...]]:
 	"""Получает данные пользователя по id."""
 	with SQLite() as cursor:
 		query = """
@@ -76,17 +69,13 @@ def _get_user_data_by_user_id(
 				END) as registration,
 				ud.last_name as last_name, ud.first_name as first_name,
 				ud.patronymic as patronymic, ud.email as email,
-				c.company_id as company_id
+				ud.company_id as company_id
 			FROM
 				user_data as ud
-			LEFT JOIN
+			JOIN
 				user_authorization as ua ON ua.user_id = ud.user_id
-			LEFT JOIN
-				company as c ON c.company_id = ud.company_id
-			LEFT JOIN
-				invitation_tokens as it ON it.user_id = ud.user_id
-            WHERE
-                ud.user_id = ?
+			WHERE
+				ud.user_id = ?
 		"""
 		cursor.execute(query, (user_id,))
 		response_from_db = cursor.fetchone()
@@ -207,4 +196,23 @@ def check_user_password(user_id: int, hashed_password: str) -> bool:
 			{'user_id': user_id, 'hashed_password': hashed_password}
 		)
 		response_from_db = bool(cursor.fetchone()[0])
+		return response_from_db
+
+def get_account_data(user_id: int) -> Tuple[str, ...]:
+	"""Получает данные аккаунта пользователя."""
+	with SQLite() as cursor:
+		query = """
+			SELECT
+				ud.last_name as last_name, ud.first_name as first_name,
+				ud.patronymic as patronymic, ud.email as email,
+				c.company_name as company
+			FROM
+				user_data as ud
+			JOIN
+				company as c ON c.company_id = ud.company_id
+			WHERE
+				ud.user_id = ?
+		"""
+		cursor.execute(query, (user_id,))
+		response_from_db = cursor.fetchone()
 		return response_from_db

@@ -1,6 +1,7 @@
 from typing import TypedDict, Optional, Union, List, Tuple, Any
 from database import user_db
 from flask import request
+from utilities import const
 
 
 class DataDict(TypedDict):
@@ -39,5 +40,5 @@ class UserModel:
             "patrotymic": data_from_db[4],
             "email": data_from_db[5],
             "company":
-                f"{request.url_root}api/1.1/company/{data_from_db[6]}"
+            f"{request.url_root}{const.prefix_api}/company/{data_from_db[6]}"
         }

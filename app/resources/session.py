@@ -19,4 +19,4 @@ class Session(Resource):
 class SessionNew(Resource):
 
 	def get(self) -> flaskTyping.ResponseReturnValue:
-		return common.template_response(template="authorization_page.html")
+		return common.template_response(template="authorization.html")
