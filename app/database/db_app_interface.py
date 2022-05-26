@@ -2,7 +2,6 @@ from typing import List, Tuple, Union
 from .db import SQLite
 
 
-#ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ ДАННЫХ ИЗ БД ДЛЯ ПОСТРОЕНИЯ СТРАНИЦ
 def get_side_menu_data(user_id: int) -> List[Tuple[Union[int, str]]]:
 	"""Получает данные бокового меню."""
 	with SQLite() as cursor:

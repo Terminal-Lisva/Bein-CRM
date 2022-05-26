@@ -1,5 +1,5 @@
 from enum import Enum
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Optional, Tuple, Union, Dict, Any, List
 from utilities.validations import Validation
 from controller.service_layer.authentication_info import UserAuthenticationInfo
@@ -18,17 +18,6 @@ class HandlerRequest(ABC):
 	def __init__(self):
 		self._handler_error = None
 
-	@abstractmethod
-	def handle(self) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
-		"""Обрабатывает соответствующий запрос."""
-		raise NotImplementedError()
-
-	def _check(self, value: bool, source: str, type: str, enum: Enum) -> bool:
-		"""Устанавливает соответствующую ошибку если значение ложное."""
-		if not value:
-			self._set_handler_error(source, type, enum)
-		return value
-
 	def _set_handler_error(self, source: str, type: str, enum: Enum) -> None:
 		"""Устанавливает ошибку обработчика."""
 		self._handler_error = source, type, enum.value
@@ -38,8 +27,8 @@ class HandlerRequest(ABC):
 		return self._handler_error
 
 
-class Errors(Enum):
-	"""Ошибки"""
+class AuthenticationErrors(Enum):
+	"""Ошибки аутентификации"""
 	NO_AUTHENTICATION = 1
 
 
@@ -51,10 +40,40 @@ class HandlerRequestWithAuthentication(HandlerRequest):
 		self._authentication_user = UserAuthenticationInfo()
 
 	def _check_authentication_user(self) -> bool:
-		"""Проверяет аутентификацию пользователя."""
-		return self._check(
-			value=self._authentication_user,
-			source="CookieSession/CookieAuth",
-			type="REQUEST_AUTH",
-			enum=Errors.NO_AUTHENTICATION
-		)
+		"""Проверяет аутентификацию пользователя.
+		Если пользователь не аутентифицирован
+		устанавливает соответствующую ошибку операции."""
+		if not self._authentication_user:
+			self._set_handler_error(
+				source="CookieSession/CookieAuth",
+				type="NO_AUTHENTICATION",
+				enum=AuthenticationErrors.NO_AUTHENTICATION
+			)
+			return False
+		return True
+
+
+class PermissionErrors(Enum):
+	"""Ошибки разрешения"""
+	NO_PERMISSION = 1
+
+
+class HandlerRequestWithCheckID(HandlerRequestWithAuthentication):
+	"""Обработчик запроса с проверкой ID"""
+
+	def __init__(self):
+		super().__init__()
+
+	def _check_user_id(self, user_id: int) -> bool:
+		"""Проверяет аутентификацию пользователя.
+		Сверяет входную ID пользователя с ID из аутентификации."""
+		if not self._check_authentication_user():
+			return False
+		elif user_id != self._authentication_user.id:
+			self._set_handler_error(
+				source=f"id: {user_id}",
+				type="NO_PERMISSION",
+				enum=PermissionErrors.NO_PERMISSION
+			)
+			return False
+		return True

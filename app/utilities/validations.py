@@ -17,7 +17,7 @@ class ValidationInvitationToken(Validation):
 
 	def __init__(self, invitation_token: str):
 		self.__invitation_token = invitation_token
-	
+
 	def get_result(self) -> bool:
 		"""Получает результат."""
 		return len(self.__invitation_token) == 32
@@ -68,10 +68,10 @@ class ValidationEmail(Validation):
 
 class ValidationFIO(Validation):
 	"""Валидация ФИО"""
-	
+
 	def __init__(self, fio: str):
 		self.__fio = fio
-	
+
 	def get_result(self) -> bool:
 		"""Получает результат."""
 		fio_split = self.__fio.split(" ")

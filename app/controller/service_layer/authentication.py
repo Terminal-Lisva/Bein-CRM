@@ -5,7 +5,7 @@ GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth)
 from utilities.other import HashingData, records_log_user_authentication
 from enum import Enum
 from utilities.validations import ValidationEmail, ValidationPassword
-from database import user_db
+from database import db_auth
 
 
 class GetterUserIDFromCookies(ABC):
@@ -54,7 +54,7 @@ class GetterUserIDFromCookieAuth(GetterUserIDFromCookies):
 			email, hashed_password = self.__data_from_cookie.get(cookie)
 		except CookieError:
 			return None
-		user_id = user_db.get_user_id((email, hashed_password))
+		user_id = db_auth.get_user_id((email, hashed_password))
 		return user_id
 
 
@@ -75,7 +75,7 @@ class ValidationErrors(Enum):
 
 class NoDataErrors(Enum):
 	"""Ошибки отсутствия данных"""
-	NO_USER = 3
+	NO_USER = 2
 
 
 class AuthenticationByEmailAndPassword(Authentication):
@@ -132,7 +132,7 @@ class AuthenticationByEmailAndPassword(Authentication):
 		"""Получает id пользователя из базы данных.
 		Если пользователь отсутствует в базе данных устанавливает
 		соответствующую ошибку операции."""
-		user_id = user_db.get_user_id((self.__email, hashed_password))
+		user_id = db_auth.get_user_id((self.__email, hashed_password))
 		if user_id is None:
 			self.__set_operation_error(
 				source=f"Email: {self.__email}, Пароль: {self.__password}",

@@ -1,14 +1,17 @@
 from .page import AppPage, ConstructorPageTemplate
 from flask import typing as flaskTyping, redirect
-from database import user_db
+from models.account import AccountModel
 from typing import Dict
 
 
 class AccountPage(AppPage):
     """Страница аккаунта пользователя (доступна всем пользователям)"""
 
+    __account_model: AccountModel
+
     def __init__(self, constructor: ConstructorPageTemplate):
         super().__init__(constructor)
+        self.__account_model = AccountModel()
 
     def get_response_page(self) -> flaskTyping.ResponseReturnValue:
         """Получает ответ страницу."""
@@ -22,11 +25,11 @@ class AccountPage(AppPage):
     def __get_account_data(self) -> Dict[str, str]:
         """Получает данные аккаунта пользователя."""
         user_id = self._authentication_user.id
-        account_data = user_db.get_account_data(user_id)
+        account_data = self.__account_model.get_data(user_id)
         return {
-            'last_name': account_data[0],
-            'first_name': account_data[1],
-            'patronymic': account_data[2],
-            'email': account_data[3],
-            'company': account_data[4]
+            'last_name': account_data['last_name'],
+            'first_name': account_data['first_name'],
+            'patronymic': account_data['patronymic'],
+            'email': account_data['email'],
+            'company': account_data['company']['name']
         }

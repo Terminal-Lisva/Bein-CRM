@@ -3,8 +3,8 @@ from flask import typing as flaskTyping, request, redirect
 from controller import common
 from controller.service_layer.authentication_info import UserAuthenticationInfo
 from typing import Dict, Any, List
-from models.user import UserModel
-from database import page_db, user_db
+from database import db_app_interface
+from models.account import AccountModel
 
 
 #Логика получения HTML страницы:
@@ -28,8 +28,11 @@ class ConstructorPageTemplate(ABC):
 class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
     """Конструктор шаблона страницы с боковым меню"""
 
+    __account_model: AccountModel
+
     def __init__(self, template):
         super().__init__(template)
+        self.__account_model = AccountModel()
 
     def creates(
         self,
@@ -51,7 +54,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
 
     def __get_tree_side_menu_data(self, user_id: int) -> List[dict]:
         """Получает дерево данных бокового меню пользователя."""
-        side_menu_data = page_db.get_side_menu_data(user_id)
+        side_menu_data = db_app_interface.get_side_menu_data(user_id)
         tree_side_menu_data: list = []
         def creates_tree(l, parent_id):
             for row in side_menu_data:
@@ -71,8 +74,11 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
 
     def __get_title_data(self, user_id: int) -> Dict[str, str]:
         """Получает данные необходимые для построения заголовка."""
-        data_from_db = user_db.get_user_data(user_id)
-        return {"email": data_from_db[5], "last_name": data_from_db[2]}
+        account_data = self.__account_model.get_data(user_id)
+        return {
+            "email": account_data['email'],
+            "last_name": account_data['last_name']
+        }
 
 
 class ConstructorPageTemplateWithoutSideMenu(ConstructorPageTemplate):
@@ -89,11 +95,6 @@ class AppPage(ABC):
     def __init__(self, constructor):
         self._constructor = constructor
         self._authentication_user = UserAuthenticationInfo()
-
-    @abstractmethod
-    def get_response_page(self) -> flaskTyping.ResponseReturnValue:
-        """Получает ответ страницу."""
-        raise NotImplementedError()
 
     def _forms_response_page(self, **kwargs) -> flaskTyping.ResponseReturnValue:
         """Формирует ответ страницу."""
@@ -115,32 +116,9 @@ class PageWithPermitView(AppPage):
     def __init__(self, constructor: ConstructorPageTemplate):
         super().__init__(constructor)
 
-    def get_response_page(self) -> flaskTyping.ResponseReturnValue:
-        """Получает ответ."""
-        if not self._authentication_user:
-            return redirect("/", code=302)
-        elif not self.__permit_view_page():
-            return "404"
-        response_page = self._forms_response_page()
-        return response_page
-
     def __permit_view_page(self) -> bool:
         """Разрешение просмотра страницы."""
         page_uri = request.path
-        permit = page_db.get_permit_view_page(
+        permit = db_app_interface.get_permit_view_page(
             self._authentication_user.id, page_uri)
         return permit
-
-
-class PageAvailable(AppPage):
-    """Страница доступная всем (разрешение на ее просмотр не требуется)"""
-
-    def __init__(self, constructor: ConstructorPageTemplate):
-        super().__init__(constructor)
-
-    def get_response_page(self) -> flaskTyping.ResponseReturnValue:
-        """Получает ответ страницу."""
-        if not self._authentication_user:
-            return redirect("/", code=302)
-        response_page = self._forms_response_page()
-        return response_page
