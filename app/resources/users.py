@@ -16,7 +16,7 @@ class Users(Resource):
 		token = parser_users.parse_args()["invitation_token"]
 		password = parser_users.parse_args()["password"]
 		handler = HandlerRequestAddAccount(token, password)
-		return Response(handler, status_code=201).get()
+		return Response(handler).get()
 
 
 #args for put password user:
@@ -30,4 +30,4 @@ class UsersPassword(Resource):
 		token = parser_users_password.parse_args()["invitation_token"]
 		password = parser_users_password.parse_args()["new_password"]
 		handler = HandlerRequestRestoreAccount(token, password)
-		return Response(handler, status_code=201).get()
+		return Response(handler).get()

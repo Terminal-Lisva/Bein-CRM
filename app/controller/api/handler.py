@@ -1,5 +1,5 @@
 from enum import Enum
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union, Dict, Any, List
 from utilities.validations import Validation
 from controller.service_layer.authentication_info import UserAuthenticationInfo
@@ -18,6 +18,10 @@ class HandlerRequest(ABC):
 	def __init__(self):
 		self._handler_error = None
 
+	@abstractmethod
+	def handle(self) -> Optional[Tuple[Dict[str, Any], int]]:
+		"""Обрабатывает соответствующий запрос."""
+
 	def _set_handler_error(self, source: str, type: str, enum: Enum) -> None:
 		"""Устанавливает ошибку обработчика."""
 		self._handler_error = source, type, enum.value
@@ -32,7 +36,7 @@ class AuthenticationErrors(Enum):
 	NO_AUTHENTICATION = 1
 
 
-class HandlerRequestWithAuthentication(HandlerRequest):
+class HandlerRequestWithAuthentication(HandlerRequest, ABC):
 	"""Обработчик запроса с аутентификацией пользователя"""
 
 	def __init__(self):
@@ -58,7 +62,7 @@ class PermissionErrors(Enum):
 	NO_PERMISSION = 1
 
 
-class HandlerRequestWithCheckID(HandlerRequestWithAuthentication):
+class HandlerRequestWithCheckID(HandlerRequestWithAuthentication, ABC):
 	"""Обработчик запроса с проверкой ID"""
 
 	def __init__(self):

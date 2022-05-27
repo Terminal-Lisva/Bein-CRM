@@ -1,5 +1,6 @@
 from enum import Enum
 from .handler import HandlerRequest, HandlerError
+from abc import ABC
 from models.account import AccountModel, AccountDataDict
 from typing import Optional
 from utilities.validations import ValidationInvitationToken, ValidationPassword
@@ -25,7 +26,7 @@ class AlreadyDataErrors(Enum):
 	USER_IS_NOT_BD = 2
 
 
-class HandlerRequestAccountAccess(HandlerRequest):
+class HandlerRequestAccountAccess(HandlerRequest, ABC):
 	"""Обоработчик запроса доступа к аккаунту пользователя"""
 
 	_token: str
@@ -72,8 +73,7 @@ class HandlerRequestAccountAccess(HandlerRequest):
 
 	def _get_account_data(self, user_id: int) -> AccountDataDict:
 		"""Получает данные аккаунта зарегистрированного пользователя."""
-		account_data = self._account_model.get_data(user_id)
-		return account_data
+		return self._account_model.get_data(user_id)
 
 
 class HandlerRequestAddAccount(HandlerRequestAccountAccess):
@@ -88,7 +88,8 @@ class HandlerRequestAddAccount(HandlerRequestAccountAccess):
 		user_id = self._get_user_id()
 		self.__add_user_to_db(user_id)
 		records_log_user_registration(user_id)
-		return self._get_account_data(user_id)
+		account_data = self._get_account_data(user_id)
+		return account_data, 201
 
 	def __add_user_to_db(self, user_id: int) -> None:
 		"""Добавляет пользователя в базу данных.
@@ -117,7 +118,8 @@ class HandlerRequestRestoreAccount(HandlerRequestAccountAccess):
 		user_id = self._get_user_id()
 		self.__restores_user_to_db(user_id)
 		records_log_user_restorer(user_id)
-		return self._get_account_data(user_id)
+		account_data = self._get_account_data(user_id)
+		return account_data, 201
 
 	def __restores_user_to_db(self, user_id: int) -> None:
 		"""Восстанавливает пользователя в базе данных.

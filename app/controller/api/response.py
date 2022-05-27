@@ -7,11 +7,9 @@ class Response:
 	"""Ответ"""
 
 	__handler: HandlerRequest
-	__status_code: int
 
-	def __init__(self, handler, status_code):
+	def __init__(self, handler):
 		self.__handler = handler
-		self.__status_code = status_code
 
 	def get(self) -> flaskTyping.ResponseReturnValue:
 		"""Получает ответ."""
@@ -19,8 +17,10 @@ class Response:
 			result = self.__handler.handle()
 		except HandlerError:
 			result = None
-		if not result:
+
+		if result is None:
 			source_error, type_error, code_error = \
 											self.__handler.get_handler_error()
 			return common.error_response(source_error, type_error, code_error)
-		return common.make_json_response(result, self.__status_code)
+		response, status_code = result
+		return common.make_json_response(response, status_code)

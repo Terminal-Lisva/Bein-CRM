@@ -1,6 +1,6 @@
 from enum import Enum
 from .handler import HandlerRequestWithCheckID
-from typing import Optional
+from typing import Optional, Tuple, Dict
 from models.account import AccountModel
 from utilities.other import HashingData
 from database import db_auth
@@ -37,16 +37,16 @@ class HandlerRequestСhangePassword(HandlerRequestWithCheckID):
         self.__cookie_auth = None
         self.__account_model = AccountModel()
 
-    def handle(self) -> bool:
+    def handle(self) -> Optional[Tuple[Dict[str, str], int]]:
         """Обрабатывает запрос на изменение пароля."""
         if (not self._check_user_id(self.__user_id) or
             not self.__check_current_password() or
             not self.__check_new_password()):
-            return False
+            return None
         hashed_new_password = HashingData().calculate_hash(self.__new_password)
         self.__changes_password_in_db(hashed_new_password)
         self.__set_cookie_auth(hashed_new_password)
-        return True
+        return {"message": "Пароль успешно изменен"}, 201
 
     def __check_current_password(self) -> bool:
         """Проверяет текущий пароль."""
@@ -102,13 +102,14 @@ class ResponseAboutChangePassword:
     def get(self) -> flaskTyping.ResponseReturnValue:
         """Получает ответ."""
         result = self.__handler.handle()
-        if not result:
+        if result is None:
             source_error, type_error, code_error = \
                                             self.__handler.get_handler_error()
             return common.error_response(source_error, type_error, code_error)
-        response = common.make_json_response({}, 204)
+        response, status_code = result
+        response_json = common.make_json_response(response, status_code)
         common.add_cookies_to_response(
-            response,
+            response_json,
             cookie_auth = self.__handler.get_cookie_auth()
         )
         return response
