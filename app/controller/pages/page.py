@@ -20,7 +20,7 @@ class ConstructorPageTemplate(ABC):
     def creates(
         self,
         user_id: int,
-        supplement: Dict[str, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: Dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу."""
         raise NotImplementedError()
 
@@ -37,7 +37,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
     def creates(
         self,
         user_id: int,
-        supplement: Dict[str, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: Dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу с боковым меню.
         У пользователей разная видимость бокового меню."""
         side_menu_data = self.__get_tree_side_menu_data(user_id)
@@ -109,14 +109,14 @@ class AppPage(ABC):
         return response_page
 
 
-class PageWithPermitView(AppPage):
+class PageWithPermitView(AppPage, ABC):
     """Страница с разрешением на ее просмотр. Пользователям доступны внутри
     приложения не все страницы"""
 
     def __init__(self, constructor: ConstructorPageTemplate):
         super().__init__(constructor)
 
-    def __permit_view_page(self) -> bool:
+    def _permit_view_page(self) -> bool:
         """Разрешение просмотра страницы."""
         page_uri = request.path
         permit = db_app_interface.get_permit_view_page(
