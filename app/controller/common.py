@@ -14,10 +14,10 @@ def get_data_from_json(keys: list[str]) -> dict[str, Any] | None:
         return None
 
 def make_json_response(
-    response: dict,
+    document: dict,
     status_code: int) -> flaskTyping.ResponseReturnValue:
     """Делает ответ в формате JSON."""
-    return make_response(jsonify(response), status_code)
+    return make_response(jsonify(document), status_code)
 
 def error_response(
     source_error: str,

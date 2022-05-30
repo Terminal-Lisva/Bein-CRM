@@ -49,6 +49,14 @@ class Errors(Enum):
 		"status_code": 401
 	}
 
+	BAD_REQUEST = {
+		"errors": {
+			1: "Неопознанный путь",
+		},
+		"status_code": 404
+	}
+
+
 #Пример ошибки:
 #{
 #	"source": "Пароль: qwerty123",

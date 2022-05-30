@@ -24,4 +24,4 @@ class Response:
 				type_error=error.type,
 				code_error=error.code
 			)
-		return common.make_json_response(result.response, result.status_code)
+		return common.make_json_response(result.document, result.status_code)

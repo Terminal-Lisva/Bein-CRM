@@ -44,7 +44,7 @@ class HandlerRequestСhangePassword(HandlerRequestWithCheckID):
         self.__changes_password_in_db(hashed_new_password)
         self.__set_cookie_auth(hashed_new_password)
         return HandlerResult(
-            response={"message": "Пароль успешно изменен"},
+            document={"message": "Пароль успешно изменен"},
             status_code=201
         )
 
@@ -110,7 +110,7 @@ class ResponseAboutChangePassword:
                 code_error=error.code
             )
         response_json = common.make_json_response(
-            result.response, result.status_code)
+            result.document, result.status_code)
         common.add_cookies_to_response(
             response_json,
             cookie_auth = self.__handler.get_cookie_auth()

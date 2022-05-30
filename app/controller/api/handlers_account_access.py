@@ -1,13 +1,19 @@
+from typing import TypedDict, Literal
 from dataclasses import dataclass
 from enum import Enum
-from .handler import (HandlerRequest, ExcHandlerError, Response, HandlerResult,
-make_meta_data)
+from .handler import (HandlerRequest, ExcHandlerError, HandlerResult,
+make_href_meta)
 from abc import ABC
 from utilities.validations import ValidationInvitationToken, ValidationPassword
 from utilities.other import (records_log_user_registration,
 records_log_user_restorer, HashingData)
 from database import db_auth
 from database.models.user import Users
+
+
+class DocumentAccount(TypedDict):
+	meta: dict[Literal["href", "type"], str]
+	email: str
 
 
 class ValidationErrors(Enum):
@@ -70,12 +76,16 @@ class HandlerRequestAccountAccess(HandlerRequest, ABC):
 			raise ExcHandlerError
 		return user_id
 
-	def _create_response(self, user_id: int) -> Response:
-		"""Создает ответ от обработчика."""
+	def _create_document(self, user_id: int) -> DocumentAccount:
+		"""Создает документ."""
 		user = Users.query.get(user_id)
-		return make_meta_data(
-			href=f"/users/{user_id}/account",
-			type="account") | {"email": user.email}
+		return DocumentAccount(
+			meta={
+				"href": make_href_meta(path=f"/users/{user_id}/account"),
+				"type": "account"
+			},
+			email=user.email
+		)
 
 
 class HandlerRequestAddAccount(HandlerRequestAccountAccess):
@@ -91,8 +101,8 @@ class HandlerRequestAddAccount(HandlerRequestAccountAccess):
 		user_id = self._get_user_id()
 		self.__add_user_to_db(user_id)
 		records_log_user_registration(user_id)
-		response = self._create_response(user_id)
-		return HandlerResult(response, status_code=201)
+		document = self._create_document(user_id)
+		return HandlerResult(document, status_code=201)
 
 	def __add_user_to_db(self, user_id: int) -> None:
 		"""Добавляет пользователя в базу данных.
@@ -122,8 +132,8 @@ class HandlerRequestRestoreAccount(HandlerRequestAccountAccess):
 		user_id = self._get_user_id()
 		self.__restores_user_to_db(user_id)
 		records_log_user_restorer(user_id)
-		response = self._create_response(user_id)
-		return HandlerResult(response, status_code=201)
+		document = self._create_document(user_id)
+		return HandlerResult(document, status_code=201)
 
 	def __restores_user_to_db(self, user_id: int) -> None:
 		"""Восстанавливает пользователя в базе данных.

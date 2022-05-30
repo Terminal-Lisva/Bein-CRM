@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from flask import request
 from utilities.const import prefix_api
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Mapping, Any
 from enum import Enum
 from utilities.validations import Validation
 from controller.service_layer.authentication_info import UserAuthenticationInfo
@@ -19,23 +19,18 @@ class HandlerError:
 	code: int | None = None
 
 
-Response = dict[str, str | dict[str, str]]
-
 @dataclass(slots=True, frozen=True)
 class HandlerResult:
-	response: Response | None = None
+	document: Mapping[str, Any] | None = None
 	status_code: int | None = None
 
 	def __bool__(self) -> bool:
-		return self.response is not None
+		return self.document is not None
 
 
-def make_meta_data(href: str, type: str) -> dict[str, str]:
-    """Создает мета-данные."""
-    return {
-        "href": request.url_root + prefix_api + href,
-        "type": type
-    }
+def make_href_meta(path: str) -> str:
+	"""Создает href мета."""
+	return request.url_root + prefix_api + path
 
 
 class HandlerRequest(ABC):
