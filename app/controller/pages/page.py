@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from flask import typing as flaskTyping, request, redirect
+from flask import typing as flaskTyping, request
 from controller import common
 from controller.service_layer.authentication_info import UserAuthenticationInfo
-from typing import Dict, Any, List
+from typing import Any
 from database import db_app_interface
-from models.account import AccountModel
+from database.models.user import Users
 
 
 #Логика получения HTML страницы:
@@ -20,7 +20,7 @@ class ConstructorPageTemplate(ABC):
     def creates(
         self,
         user_id: int,
-        supplement: Dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу."""
         raise NotImplementedError()
 
@@ -28,16 +28,13 @@ class ConstructorPageTemplate(ABC):
 class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
     """Конструктор шаблона страницы с боковым меню"""
 
-    __account_model: AccountModel
-
     def __init__(self, template):
         super().__init__(template)
-        self.__account_model = AccountModel()
 
     def creates(
         self,
         user_id: int,
-        supplement: Dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу с боковым меню.
         У пользователей разная видимость бокового меню."""
         side_menu_data = self.__get_tree_side_menu_data(user_id)
@@ -52,7 +49,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         )
         return page
 
-    def __get_tree_side_menu_data(self, user_id: int) -> List[dict]:
+    def __get_tree_side_menu_data(self, user_id: int) -> list[dict]:
         """Получает дерево данных бокового меню пользователя."""
         side_menu_data = db_app_interface.get_side_menu_data(user_id)
         tree_side_menu_data: list = []
@@ -72,12 +69,12 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         creates_tree(l=tree_side_menu_data, parent_id=0)
         return tree_side_menu_data
 
-    def __get_title_data(self, user_id: int) -> Dict[str, str]:
+    def __get_title_data(self, user_id: int) -> dict[str, str]:
         """Получает данные необходимые для построения заголовка."""
-        account_data = self.__account_model.get_data(user_id)
+        user = Users.query.get(user_id)
         return {
-            "email": account_data['email'],
-            "last_name": account_data['last_name']
+            "email": user.email,
+            "last_name": user.last_name
         }
 
 
@@ -99,7 +96,7 @@ class AppPage(ABC):
     def _forms_response_page(self, **kwargs) -> flaskTyping.ResponseReturnValue:
         """Формирует ответ страницу."""
         response_page = self._constructor.creates(
-            user_id=self._authentication_user.id,
+            user_id=self._authentication_user.user_id,
             supplement=kwargs
         )
         common.add_cookies_to_response(
@@ -118,7 +115,8 @@ class PageWithPermitView(AppPage, ABC):
 
     def _permit_view_page(self) -> bool:
         """Разрешение просмотра страницы."""
-        page_uri = request.path
         permit = db_app_interface.get_permit_view_page(
-            self._authentication_user.id, page_uri)
+            user_id=self._authentication_user.user_id,
+            page_uri=request.path
+        )
         return permit

@@ -1,4 +1,4 @@
-from .handler import HandlerRequest, HandlerError
+from .handler import HandlerRequest, ExcHandlerError
 from flask import typing as flaskTyping
 from controller import common
 
@@ -15,12 +15,13 @@ class Response:
 		"""Получает ответ."""
 		try:
 			result = self.__handler.handle()
-		except HandlerError:
-			result = None
-
-		if result is None:
-			source_error, type_error, code_error = \
-											self.__handler.get_handler_error()
-			return common.error_response(source_error, type_error, code_error)
-		response, status_code = result
-		return common.make_json_response(response, status_code)
+		except ExcHandlerError:
+			result = False
+		if not result:
+			error = self.__handler.get_handler_error()
+			return common.error_response(
+				source_error=error.source,
+				type_error=error.type,
+				code_error=error.code
+			)
+		return common.make_json_response(result.response, result.status_code)

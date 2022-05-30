@@ -1,5 +1,4 @@
 from functools import singledispatch
-from typing import Optional
 from .db import SQLite
 
 
@@ -9,7 +8,7 @@ def get_user_id(arg) -> None:
 	pass
 
 @get_user_id.register(str)
-def _get_user_id_by_invitation_token(invitation_token: str) -> Optional[int]:
+def _get_user_id_by_invitation_token(invitation_token: str) -> int | None:
 	"""Получает id пользователя по току приглашения."""
 	with SQLite() as cursor:
 		query = """
@@ -26,17 +25,17 @@ def _get_user_id_by_invitation_token(invitation_token: str) -> Optional[int]:
 		return response_from_db[0] if response_from_db is not None else None
 
 @get_user_id.register(tuple)
-def _get_user_id_by_email_and_password(args: tuple) -> Optional[int]:
+def _get_user_id_by_email_and_password(args: tuple[str, str]) -> int | None:
 	"""Получает id пользователя по емайлу и паролю."""
 	email, hashed_password = args
 	with SQLite() as cursor:
 		query = """
 			SELECT
-				ud.user_id as user_id
+				ud.id
 			FROM
 				user_data as ud
 			JOIN
-				user_authorization as ua ON ua.user_id = ud.user_id
+				user_authorization as ua ON ua.user_id = ud.id
 			WHERE
 				ud.email = :email AND ua.hashed_password = :hashed_password
 		"""

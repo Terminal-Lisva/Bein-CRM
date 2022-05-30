@@ -1,5 +1,4 @@
-from typing import Tuple, Union
-from abc import ABC, abstractmethod
+from typing import NamedTuple
 from utilities.other import HashingData, encrypts_data, decrypts_data
 
 
@@ -30,28 +29,38 @@ class CreatorCookieAuth():
 		return data_encryption
 
 
+class DataFromCookieSession(NamedTuple):
+	user_id: int
+	hashed_user_id: str
+
+
 class GetterDataFromCookieSession():
 	"""Получатель данных из куки сессии"""
 
 	@staticmethod
-	def get(cookie: str) -> Tuple[int, str]:
+	def get(cookie: str) -> DataFromCookieSession:
 		"""Получает данные из куки сессии."""
 		data_decryption = decrypts_data(cookie)
 		split_data_decryption = data_decryption.split('.')
 		if len(split_data_decryption) != 2: raise CookieError
 		user_id = int(split_data_decryption[0])
 		hashed_user_id = split_data_decryption[1]
-		return user_id, hashed_user_id
+		return DataFromCookieSession(user_id, hashed_user_id)
+
+
+class DataFromCookieAuth(NamedTuple):
+	email: str
+	hashed_password: str
 
 
 class GetterDataFromCookieAuth():
 	"""Получатель данных из куки авторизации"""
 
 	@staticmethod
-	def get(cookie: str) -> Tuple[str, str]:
+	def get(cookie: str) -> DataFromCookieAuth:
 		"""Получает данные из куки авторизации."""
 		data_decryption = decrypts_data(cookie)
 		split_data_decryption = tuple(data_decryption.split('&'))
 		if len(split_data_decryption) != 2: raise CookieError
 		email, hashed_password = split_data_decryption
-		return email, hashed_password
+		return DataFromCookieAuth(email, hashed_password)

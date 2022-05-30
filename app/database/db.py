@@ -3,11 +3,11 @@ import sqlite3
 
 class SQLite:
 	"""База данных - SQLite"""
-	
+
 	def __init__(self):
-		self.__file = "./app/database/web_kard.db"
+		self.__file = "./app/database/info_portal.sqlite"
 		self.__connect = None
-	
+
 	def __enter__(self):
 		self.__connect = sqlite3.connect(self.__file)
 		return self.__connect.cursor()

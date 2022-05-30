@@ -1,4 +1,3 @@
-from typing import *
 from abc import ABC, abstractmethod
 import re
 
@@ -15,7 +14,9 @@ class Validation(ABC):
 class ValidationInvitationToken(Validation):
 	"""Валидация токена приглашения"""
 
-	def __init__(self, invitation_token: str):
+	__invitation_token: str
+
+	def __init__(self, invitation_token):
 		self.__invitation_token = invitation_token
 
 	def get_result(self) -> bool:
@@ -26,7 +27,9 @@ class ValidationInvitationToken(Validation):
 class ValidationPassword(Validation):
 	"""Валидация пароля"""
 
-	def __init__(self, password: str):
+	__password: str
+
+	def __init__(self, password):
 		self.__password = password
 
 	def get_result(self) -> bool:
@@ -47,7 +50,9 @@ class ValidationPassword(Validation):
 class ValidationEmail(Validation):
 	"""Валидация электронной почты"""
 
-	def __init__(self, email: str):
+	__email: str
+
+	def __init__(self, email):
 		self.__email = email
 
 	def get_result(self) -> bool:
@@ -69,7 +74,9 @@ class ValidationEmail(Validation):
 class ValidationFIO(Validation):
 	"""Валидация ФИО"""
 
-	def __init__(self, fio: str):
+	__fio: str
+
+	def __init__(self, fio):
 		self.__fio = fio
 
 	def get_result(self) -> bool:

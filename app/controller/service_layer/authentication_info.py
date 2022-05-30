@@ -8,12 +8,12 @@ from controller import common
 class UserAuthenticationInfo:
     """Информация об аутентификации пользователя"""
 
-    id: Optional[int] = field(init=False)
+    user_id: Optional[int] = field(init=False)
     cookie_session: Optional[str] = field(init=False)
 
     def __post_init__(self):
         authentication = self.__get_authentication()
-        self.id = authentication.authenticates_user()
+        self.user_id = authentication.authenticates_user()
         self.cookie_session = authentication.get_cookie_session()
 
     def __get_authentication(self) -> Authentication:
@@ -24,4 +24,4 @@ class UserAuthenticationInfo:
 
     def __bool__(self) -> bool:
         """Проверка на наличие пользователя."""
-        return self.id is not None
+        return self.user_id is not None

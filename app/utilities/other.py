@@ -1,4 +1,4 @@
-from typing import Any, Optional, List, Tuple
+from typing import Any
 import hmac
 from hashlib import sha256
 import logging

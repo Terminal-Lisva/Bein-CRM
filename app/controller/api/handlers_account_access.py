@@ -1,12 +1,13 @@
+from dataclasses import dataclass
 from enum import Enum
-from .handler import HandlerRequest, HandlerError
+from .handler import (HandlerRequest, ExcHandlerError, Response, HandlerResult,
+make_meta_data)
 from abc import ABC
-from models.account import AccountModel, AccountDataDict
-from typing import Optional
 from utilities.validations import ValidationInvitationToken, ValidationPassword
 from utilities.other import (records_log_user_registration,
 records_log_user_restorer, HashingData)
 from database import db_auth
+from database.models.user import Users
 
 
 class ValidationErrors(Enum):
@@ -31,13 +32,11 @@ class HandlerRequestAccountAccess(HandlerRequest, ABC):
 
 	_token: str
 	_password: str
-	_account_model: AccountModel
 
 	def __init__(self, token, password):
 		super().__init__()
 		self._token = token
 		self._password = password
-		self._account_model = AccountModel()
 
 	def _check_request_data(self) -> bool:
 		"""Проверяет данные из запроса."""
@@ -68,12 +67,15 @@ class HandlerRequestAccountAccess(HandlerRequest, ABC):
 				type="NO_DATA",
 				enum=NoDataErrors.NO_TOKEN
 			)
-			raise HandlerError
+			raise ExcHandlerError
 		return user_id
 
-	def _get_account_data(self, user_id: int) -> AccountDataDict:
-		"""Получает данные аккаунта зарегистрированного пользователя."""
-		return self._account_model.get_data(user_id)
+	def _create_response(self, user_id: int) -> Response:
+		"""Создает ответ от обработчика."""
+		user = Users.query.get(user_id)
+		return make_meta_data(
+			href=f"/users/{user_id}/account",
+			type="account") | {"email": user.email}
 
 
 class HandlerRequestAddAccount(HandlerRequestAccountAccess):
@@ -82,14 +84,15 @@ class HandlerRequestAddAccount(HandlerRequestAccountAccess):
 	def __init__(self, token, password):
 		super().__init__(token, password)
 
-	def handle(self) -> Optional[AccountDataDict]:
+	def handle(self) -> HandlerResult:
 		"""Обрабатывает запрос на регистрацию пользователя."""
-		if not self._check_request_data(): return None
+		if not self._check_request_data():
+			return HandlerResult()
 		user_id = self._get_user_id()
 		self.__add_user_to_db(user_id)
 		records_log_user_registration(user_id)
-		account_data = self._get_account_data(user_id)
-		return account_data, 201
+		response = self._create_response(user_id)
+		return HandlerResult(response, status_code=201)
 
 	def __add_user_to_db(self, user_id: int) -> None:
 		"""Добавляет пользователя в базу данных.
@@ -101,7 +104,7 @@ class HandlerRequestAddAccount(HandlerRequestAccountAccess):
 				type="ALREADY_DATA",
 				enum=AlreadyDataErrors.USER_IS_BD
 			)
-			raise HandlerError
+			raise ExcHandlerError
 		hashed_password = HashingData().calculate_hash(self._password)
 		db_auth.add_user_authentication(user_id, hashed_password)
 
@@ -112,14 +115,15 @@ class HandlerRequestRestoreAccount(HandlerRequestAccountAccess):
 	def __init__(self, token, password):
 		super().__init__(token, password)
 
-	def handle(self) -> Optional[AccountDataDict]:
+	def handle(self) -> HandlerResult:
 		"""Обрабатывает запрос на восстановление пароля."""
-		if not self._check_request_data(): return None
+		if not self._check_request_data():
+			return HandlerResult()
 		user_id = self._get_user_id()
 		self.__restores_user_to_db(user_id)
 		records_log_user_restorer(user_id)
-		account_data = self._get_account_data(user_id)
-		return account_data, 201
+		response = self._create_response(user_id)
+		return HandlerResult(response, status_code=201)
 
 	def __restores_user_to_db(self, user_id: int) -> None:
 		"""Восстанавливает пользователя в базе данных.
@@ -131,7 +135,7 @@ class HandlerRequestRestoreAccount(HandlerRequestAccountAccess):
 				type="ALREADY_DATA",
 				enum=AlreadyDataErrors.USER_IS_NOT_BD
 			)
-			raise HandlerError
+			raise ExcHandlerError
 		db_auth.remove_user_authentication(user_id)
 		hashed_password = HashingData().calculate_hash(self._password)
 		db_auth.add_user_authentication(user_id, hashed_password)

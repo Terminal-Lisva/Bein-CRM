@@ -4,6 +4,7 @@ env
 app.egg-info
 __pycache__
 web_kard.db
+info_portal.sqlite
 logs
 test.js
 404.html

@@ -1,23 +1,16 @@
-from typing import List, Optional, Dict, Any
+from typing import Any
 from flask import (request, typing as flaskTyping, jsonify, make_response,
 render_template)
 from utilities.errors import Errors
 
 
 #Вспомогательные функции API Flask:
-def get_data_from_json(keys: List[str]) -> Optional[Dict[str, str]]:
+def get_data_from_json(keys: list[str]) -> dict[str, Any] | None:
     """Получает данные запроса."""
     request_data = request.get_json(force=True, silent=True)
     try:
         return {key: str(request_data[key]) for key in keys}
     except (TypeError, KeyError):
-        return None
-
-def get_data_from_url(args: List[str]) -> Optional[Dict[str, str]]:
-    """Получает данные из URL."""
-    try:
-        return {arg: str(request.args.get(arg)) for arg in args}
-    except Exception: #надо тестировать на тип исключения
         return None
 
 def make_json_response(
@@ -49,18 +42,18 @@ def template_response(
 
 def add_cookies_to_response(
     response: flaskTyping.ResponseReturnValue,
-    cookie_session: Optional[str] = None,
-    cookie_auth: Optional[str] = None) -> None:
+    cookie_session: str | None = None,
+    cookie_auth: str | None = None) -> None:
     """Добавляет куки сессии и авторизации к ответу."""
     if cookie_session is not None:
         response.set_cookie(
             key='Session', value=cookie_session, httponly=True)
-    if cookie_auth is not None:
+    elif cookie_auth is not None:
         response.set_cookie(
             key='Auth', value=cookie_auth, max_age=60*60*24*30, httponly=True)
     return
 
-def get_cookie(name: str) -> Optional[str]:
+def get_cookie(name: str) -> str | None:
     """Получает соответствующую куку."""
     return request.cookies.get(name)
 

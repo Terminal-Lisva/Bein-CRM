@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 from flask import typing as flaskTyping
 from controller.service_layer.authentication import (Authentication,
 AuthenticationByEmailAndPassword, AuthenticationByCookieSession,
@@ -11,7 +10,7 @@ from itertools import filterfalse
 class ResponseHandler(ABC):
 	"""Базовый класс для обработчиков ответа"""
 
-	_response: Optional[flaskTyping.ResponseReturnValue] = None
+	_response: flaskTyping.ResponseReturnValue | None = None
 
 	def __init__(self, successor = None):
 		self.__successor = successor
@@ -28,14 +27,14 @@ class ResponseHandler(ABC):
 		raise NotImplementedError()
 
 	@property
-	def response(self) -> Optional[flaskTyping.ResponseReturnValue]:
+	def response(self) -> flaskTyping.ResponseReturnValue | None:
 		return self._response
 
 
 class EmailAndPasswordHandler(ResponseHandler):
 	"""Обработчик емайла и пароля"""
 
-	def __init__(self, successor: Optional[ResponseHandler] = None):
+	def __init__(self, successor: ResponseHandler | None = None):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
@@ -56,15 +55,19 @@ class EmailAndPasswordHandler(ResponseHandler):
 				cookie_auth=authentication.get_cookie_auth()
 			)
 		else:
-			source_er, type_er, code_er = authentication.get_operation_error()
-			self._response = common.error_response(source_er, type_er, code_er)
+			error = authentication.get_operation_error()
+			self._response = common.error_response(
+				source_error=error.source,
+				type_error=error.type,
+				code_error=error.code
+			)
 		return True
 
 
 class CookieSessionHandler(ResponseHandler):
 	"""Обработчик куки сессии"""
 
-	def __init__(self, successor: Optional[ResponseHandler] = None):
+	def __init__(self, successor: ResponseHandler | None = None):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
@@ -82,7 +85,7 @@ class CookieSessionHandler(ResponseHandler):
 class CookieAuthHandler(ResponseHandler):
 	"""Обработчик куки авторизации"""
 
-	def __init__(self, successor: Optional[ResponseHandler] = None):
+	def __init__(self, successor: ResponseHandler | None = None):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
@@ -104,7 +107,7 @@ class CookieAuthHandler(ResponseHandler):
 class LastHandler(ResponseHandler):
 	"""Обработчик последний"""
 
-	def __init__(self, successor: Optional[ResponseHandler] = None):
+	def __init__(self, successor: ResponseHandler | None = None):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
@@ -122,15 +125,14 @@ class Authorization:
 		last_handler = LastHandler()
 		cookie_auth_handler = CookieAuthHandler(last_handler)
 		cookie_session_handler = CookieSessionHandler(cookie_auth_handler)
-		email_and_password_handler = EmailAndPasswordHandler(
-														cookie_session_handler)
-		email_and_password_handler.handle()
+		email_password_handler=EmailAndPasswordHandler(cookie_session_handler)
+		email_password_handler.handle()
 		#Находим ответ из обработчиков
 		handlers = [
 			last_handler,
 			cookie_auth_handler,
 			cookie_session_handler,
-			email_and_password_handler,
+			email_password_handler,
 		]
 		for handler in filterfalse(
 				lambda handler: handler.response is None,
