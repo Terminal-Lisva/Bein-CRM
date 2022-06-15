@@ -11,7 +11,7 @@ class Filter(logging.Filter):
 
     def __init__(self, func_name):
         self.__func_name = func_name
-    
+
     def filter(self, record: logging.LogRecord) -> bool:
         return record.funcName == self.__func_name
 
@@ -22,7 +22,7 @@ class Handler(logging.Handler):
 
     def __init__(self):
         logging.Handler.__init__(self)
-    
+
     @abstractmethod
     def emit(self, record: logging.LogRecord) -> None:
         raise NotImplementedError()
@@ -55,11 +55,11 @@ class HandlerSendByEmail(Handler):
         self.__email = Email()
         self.__to = to
         self.__subject = subject
-    
+
     def emit(self, record: logging.LogRecord) -> None:
         text = self.format(record)
         self.__email.send(self.__to, self.__subject, text)
-    
+
 
 #-------------------------------КОНФИГУРАЦИЯ---------------------------------
 logger_config = {
@@ -125,17 +125,22 @@ logger_config = {
             'subject': 'Error info portal',
             'formatter': 'universal_formatter'
         },
+        'debugging': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+        }
     },
     'loggers': {
         'app_logger': {
             'level': 'DEBUG',
             'handlers': [
-                'user_registration', 
-                'user_restorer', 
+                'user_registration',
+                'user_restorer',
                 'user_authentication',
                 'change_password',
                 'error_500',
-            ] 
+                'debugging',
+            ]
         }
     }
 }

@@ -4,6 +4,7 @@ from controller.service_layer.authentication import (Authentication,
 AuthenticationByEmailAndPassword, AuthenticationByCookieSession,
 AuthenticationByCookieAuth)
 from controller import common
+from controller.api.errors import Errors
 from itertools import filterfalse
 
 
@@ -38,16 +39,18 @@ class EmailAndPasswordHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		request_data = common.get_data_from_json(keys=["email", "password"])
-		if request_data is None:
+		data_from_request = common.get_data_from_request_in_json()
+		try:
+			email = str(data_from_request["email"])
+			password = str(data_from_request["password"])
+		except (TypeError, KeyError):
 			return False
-		email = request_data["email"]
-		password = request_data["password"]
 		authentication = AuthenticationByEmailAndPassword(email, password)
 		user_id = authentication.authenticates_user()
 		if user_id is not None:
 			self._response = common.make_json_response(
-				{"message": "Сессия успешно установлена"}, 201
+				response={"message": "Сессия успешно установлена"},
+				status_code=201
 			)
 			common.add_cookies_to_response(
 				self._response,
@@ -56,11 +59,13 @@ class EmailAndPasswordHandler(ResponseHandler):
 			)
 		else:
 			error = authentication.get_operation_error()
-			self._response = common.error_response(
-				source_error=error.source,
-				type_error=error.type,
-				code_error=error.code
-			)
+			message, status_code = error.value
+			response = {
+				"source": error.source,
+				"type": error.name,
+				"message": message
+			}
+			self._response = common.make_json_response(response, status_code)
 		return True
 
 
@@ -77,7 +82,8 @@ class CookieSessionHandler(ResponseHandler):
 		if user_id is None:
 			return False
 		self._response = common.make_json_response(
-			{"message": "Сессия успешно установлена"}, 201
+			response={"message": "Сессия успешно установлена"},
+			status_code=201
 		)
 		return True
 
@@ -95,7 +101,8 @@ class CookieAuthHandler(ResponseHandler):
 		if user_id is None:
 			return False
 		self._response = common.make_json_response(
-			{"message": "Сессия успешно установлена"}, 201
+			response={"message": "Сессия успешно установлена"},
+			status_code=201
 		)
 		common.add_cookies_to_response(
 			self._response,
@@ -111,8 +118,13 @@ class LastHandler(ResponseHandler):
 		super().__init__(successor)
 
 	def _check_request(self) -> bool:
-		self._response = common.error_response(
-			source_error="cookies", type_error="REQUEST_AUTH", code_error=1)
+		message, status_code = Errors.NO_AUTHENTICATION.value
+		response = {
+			"source": "cookies",
+			"type": Errors.NO_AUTHENTICATION.name,
+			"message": message
+		}
+		self._response = common.make_json_response(response, status_code)
 		return True
 
 
@@ -125,7 +137,7 @@ class Authorization:
 		last_handler = LastHandler()
 		cookie_auth_handler = CookieAuthHandler(last_handler)
 		cookie_session_handler = CookieSessionHandler(cookie_auth_handler)
-		email_password_handler=EmailAndPasswordHandler(cookie_session_handler)
+		email_password_handler = EmailAndPasswordHandler(cookie_session_handler)
 		email_password_handler.handle()
 		#Находим ответ из обработчиков
 		handlers = [

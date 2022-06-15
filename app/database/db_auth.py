@@ -13,11 +13,11 @@ def _get_user_id_by_invitation_token(invitation_token: str) -> int | None:
 	with SQLite() as cursor:
 		query = """
 			SELECT
-				ud.user_id as user_id
+				u.user_id as user_id
 			FROM
-				user_data as ud
+				users as u
 			JOIN
-				invitation_tokens as it ON it.user_id = ud.user_id
+				invitation_tokens as it ON it.user_id = u.user_id
 			WHERE it.invitation_token = ?
 		"""
 		cursor.execute(query, (invitation_token,))
@@ -31,13 +31,13 @@ def _get_user_id_by_email_and_password(args: tuple[str, str]) -> int | None:
 	with SQLite() as cursor:
 		query = """
 			SELECT
-				ud.id
+				u.id
 			FROM
-				user_data as ud
+				users as u
 			JOIN
-				user_authorization as ua ON ua.user_id = ud.id
+				user_authorization as ua ON ua.user_id = u.id
 			WHERE
-				ud.email = :email AND ua.hashed_password = :hashed_password
+				u.email = :email AND ua.hashed_password = :hashed_password
 		"""
 		cursor.execute(
 			query,

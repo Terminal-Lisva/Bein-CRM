@@ -1,8 +1,8 @@
 from flask_restful import Resource
 from flask import typing as flaskTyping
 from controller.pages.page import ConstructorPageTemplateWithSideMenu
-from controller.pages.main_page import MainPage
-from controller.pages.account_page import AccountPage
+from controller.pages.main import MainPage
+from controller.pages.account import AccountPage
 
 
 class App(Resource):

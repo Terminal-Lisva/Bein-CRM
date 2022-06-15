@@ -1,6 +1,6 @@
 from flask_restful import Resource, reqparse
 from flask import typing as flaskTyping
-from controller.api.handlers_company import (HandlerRequestGetAllCompany,
+from controller.api.handlers.company import (HandlerRequestGetAllCompany,
 HandlerRequestGetCompany)
 from controller.api.response import Response
 

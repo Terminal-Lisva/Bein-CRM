@@ -1,7 +1,7 @@
 from flask_restful import Resource, reqparse
 from flask import typing as flaskTyping
-from controller.api.handlers_account_access import (HandlerRequestAddAccount,
-HandlerRequestRestoreAccount)
+from controller.api.handlers.user import (HandlerRequestAddUser,
+HandlerRequestRestoreUser)
 from controller.api.response import Response
 
 
@@ -15,7 +15,7 @@ class Users(Resource):
 	def post(self) -> flaskTyping.ResponseReturnValue:
 		token = parser_users.parse_args()["invitation_token"]
 		password = parser_users.parse_args()["password"]
-		handler = HandlerRequestAddAccount(token, password)
+		handler = HandlerRequestAddUser(token, password)
 		return Response(handler).get()
 
 
@@ -29,5 +29,5 @@ class UsersPassword(Resource):
 	def put(self) -> flaskTyping.ResponseReturnValue:
 		token = parser_users_password.parse_args()["invitation_token"]
 		password = parser_users_password.parse_args()["new_password"]
-		handler = HandlerRequestRestoreAccount(token, password)
+		handler = HandlerRequestRestoreUser(token, password)
 		return Response(handler).get()

@@ -1,15 +1,15 @@
 from flask import Flask
 import logging.config
 from config import logger_config
+from database.db import DATABASE_NAME
 
 
 app = Flask(__name__)
 
 
 #SQLAlchemy
-DATABASE_NAME = './database/info_portal.sqlite'
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_NAME}'
-
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///./database/{DATABASE_NAME}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #Logging
 logging.config.dictConfig(logger_config)

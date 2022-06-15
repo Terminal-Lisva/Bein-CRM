@@ -1,11 +1,14 @@
 import sqlite3
 
 
+DATABASE_NAME = "info_portal.sqlite"
+
+
 class SQLite:
 	"""База данных - SQLite"""
 
 	def __init__(self):
-		self.__file = "./app/database/info_portal.sqlite"
+		self.__file = f'./app/database/{DATABASE_NAME}'
 		self.__connect = None
 
 	def __enter__(self):

@@ -3,8 +3,8 @@ from .cookies import (CookieError, DataFromCookieSession,
 GetterDataFromCookieSession, DataFromCookieAuth,
 GetterDataFromCookieAuth, CreatorCookieSession, CreatorCookieAuth)
 from utilities.other import HashingData, records_log_user_authentication
-from enum import Enum
 from dataclasses import dataclass
+from controller.api.errors import Errors
 from utilities.validations import ValidationEmail, ValidationPassword
 from database import db_auth
 
@@ -59,22 +59,10 @@ class Authentication(ABC):
 		raise NotImplementedError()
 
 
-class ValidationErrors(Enum):
-	"""Ошибки валидации"""
-	NOT_VALID_PASSWORD = 2
-	NOT_VALID_EMAIL = 3
-
-
-class NoDataErrors(Enum):
-	"""Ошибки отсутствия данных"""
-	NO_USER = 2
-
-
-@dataclass
+@dataclass(slots=True, frozen=True)
 class OperationError:
-	source: str | None = None
-	type: str | None = None
-	code: int | None = None
+	source: str
+	error: Errors
 
 
 class AuthenticationByEmailAndPassword(Authentication):
@@ -84,14 +72,14 @@ class AuthenticationByEmailAndPassword(Authentication):
 	__password: str
 	__cookie_session: str | None
 	__cookie_auth: str | None
-	__operation_error: OperationError
+	__operation_error: OperationError | None
 
 	def __init__(self, email, password):
 		self.__email = email
 		self.__password = password
 		self.__cookie_session = None
 		self.__cookie_auth = None
-		self.__operation_error = OperationError()
+		self.__operation_error = None
 
 	def authenticates_user(self) -> int | None:
 		"""Аутентифицирует пользователя."""
@@ -113,8 +101,8 @@ class AuthenticationByEmailAndPassword(Authentication):
 		if not (result := ValidationEmail(self.__email).get_result()):
 			self.__set_operation_error(
 				source=f"Email: {self.__email}",
-				type="VALIDATION",
-				enum=ValidationErrors.NOT_VALID_EMAIL)
+				error=Errors.NOT_VALID_EMAIL
+			)
 		return result
 
 	def __check_validation_password(self) -> bool:
@@ -123,8 +111,8 @@ class AuthenticationByEmailAndPassword(Authentication):
 		if not (result := ValidationPassword(self.__password).get_result()):
 			self.__set_operation_error(
 				source=f"Пароль: {self.__password}",
-				type="VALIDATION",
-				enum=ValidationErrors.NOT_VALID_PASSWORD)
+				error=Errors.NOT_VALID_PASSWORD
+			)
 		return result
 
 	def __get_user_id_from_db(self, hashed_password: str) -> int | None:
@@ -135,8 +123,8 @@ class AuthenticationByEmailAndPassword(Authentication):
 		if user_id is None:
 			self.__set_operation_error(
 				source=f"Email: {self.__email}, Пароль: {self.__password}",
-				type="NO_DATA",
-				enum=NoDataErrors.NO_USER)
+				error=Errors.NO_USER
+			)
 		return user_id
 
 	def __set_cookie_session(self, user_id: int) -> None:
@@ -156,17 +144,11 @@ class AuthenticationByEmailAndPassword(Authentication):
 		"""Получает куки авторизации."""
 		return self.__cookie_auth
 
-	def __set_operation_error(
-		self,
-		source: str,
-		type: str,
-		enum: ValidationErrors | NoDataErrors) -> None:
+	def __set_operation_error(self, source: str, error: Errors) -> None:
 		"""Устанавливает ошибку операции."""
-		self.__operation_error.source = source
-		self.__operation_error.type = type
-		self.__operation_error.code = enum.value
+		self.__operation_error = OperationError(source, error)
 
-	def get_operation_error(self) -> OperationError:
+	def get_operation_error(self) -> OperationError | None:
 		"""Получает ошибку операции."""
 		return self.__operation_error
 
