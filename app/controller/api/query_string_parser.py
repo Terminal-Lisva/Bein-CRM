@@ -101,9 +101,7 @@ class QueryStringParser:
                 raise ErrorQueryStringParsing(source)
         return [text[interval.start+1:interval.end-1] for interval in intervals]
 
-    def _separates_conditions(
-        self,
-        conditions: list[str]) -> list[list[str]]:
+    def _separates_conditions(self, conditions: list[str]) -> list[list[str]]:
         """Отделяет условия по ";"."""
         return [condition.split(';') for condition in conditions]
 
@@ -161,8 +159,14 @@ class QueryStringParser:
                 operator=operator,
                 value=value
             )
+        elif field.type == int and value.isdecimal():
+            return LogicCondition(
+                key=field.name_in_db,
+                operator=operator,
+                value=int(value)
+            )
         value_without_prefix = del_prefix(value, field.prefix)
-        if field.type == int and value_without_prefix.isdecimal():
+        if field.type == str and value_without_prefix.isdecimal():
             return LogicCondition(
                 key=field.name_in_db,
                 operator=operator,

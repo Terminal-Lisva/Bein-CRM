@@ -1,7 +1,6 @@
 from typing import TypedDict
 from .handler import HandlerRequestGetData, HandlerError
 from controller.api import for_api
-from database.models.database import db
 from controller.api.query_string_parser import (QueryStringParser, FieldQuery,
 ErrorQueryStringParsing)
 from database.models.filters import GetterModelsUsingCustomFilter
@@ -41,7 +40,7 @@ class HandlerRequestGetAllBpm(HandlerRequestGetData):
         super().__init__()
         self._query_string = query_string
 
-    def _get_models(self) -> list[db.Model]:
+    def _get_models(self) -> list[Bpm]:
         """Получает модели."""
         if self._query_string is None:
             return Bpm.query.all()
@@ -51,7 +50,7 @@ class HandlerRequestGetAllBpm(HandlerRequestGetData):
             operators=['!=', '='],
             prefix=for_api.make_href(f"/bpm/"),
             null=True,
-            type=int
+            type=str
         )
         parser = QueryStringParser(string=self._query_string, fields=[field])
         try:
@@ -66,7 +65,7 @@ class HandlerRequestGetAllBpm(HandlerRequestGetData):
             raise HandlerError
         return models
 
-    def _create_document(self, model: db.Model) -> DocumentAllBpm:
+    def _create_document(self) -> DocumentAllBpm:
         """Создает документ."""
         models = self._get_models()
         meta = MetaAllBpm(

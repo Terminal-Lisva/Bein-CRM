@@ -18,7 +18,8 @@ class GetterModelsUsingCustomFilter:
         list_logic_conditions = self._parser.get_list_logic_conditions()
         elements = [
             or_(*[self._create_element_for_filter_model(logic_condition)
-                for logic_condition in logic_conditions]) for logic_conditions in list_logic_conditions
+                for logic_condition in logic_conditions])
+                    for logic_conditions in list_logic_conditions
         ]
         return self._model.query.filter(and_(*elements)).all()
 

@@ -37,3 +37,10 @@ def add_code_doc(data: DataForAdd) -> int:
 		cursor.execute(query, data)
 		cursor.execute("SELECT last_insert_rowid()")
 		return cursor.fetchone()[0]
+
+def del_code_doc(id_code_doc: int) -> None:
+	with SQLite() as cursor:
+		query = """
+			DELETE FROM code_documents WHERE id = ?
+		"""
+		cursor.execute(query, (id_code_doc,))
