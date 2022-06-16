@@ -1,6 +1,5 @@
 from typing import TypedDict
-from .handler import HandlerRequestGetData, HandlerError
-from database.models.database import db
+from .handler import HandlerRequestGetAllResources
 from database.models.type_doc import TypeDoc
 from controller.api import for_api
 
@@ -25,19 +24,15 @@ class DocumentAllTypesDocs(TypedDict):
     rows: list[DocumentTypeDoc]
 
 
-class HandlerRequestGetAllTypesDocs(HandlerRequestGetData):
+class HandlerRequestGetAllTypesDocs(HandlerRequestGetAllResources):
     """Обработчик запроса на получение всех типов документов"""
 
     def __init__(self):
         super().__init__()
 
-    def _get_models(self) -> list[db.Model]:
-        """Получает модели."""
-        return TypeDoc.query.all()
-
     def _create_document(self) -> DocumentAllTypesDocs:
         """Создает документ."""
-        models = self._get_models()
+        models = self._get_orm_models(cls_model=TypeDoc)
         meta = MetaAllTypesDocs(
             href=for_api.make_href(path="/docs/types"),
             type="document management system",

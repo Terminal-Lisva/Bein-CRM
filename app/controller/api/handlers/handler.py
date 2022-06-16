@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Mapping, Any, TypedDict, Protocol
+from typing import Mapping, Any, TypedDict, Protocol, Callable
 from controller.api.errors import Errors
 from controller.service_layer.authentication_info import UserAuthenticationInfo
 from database.models.database import db
+from controller.api.query_string_parser import (QueryStringParser, FieldQuery,
+ErrorQueryStringParsing)
+from database.models.filters import GetterModelsUsingCustomFilter
+from pydantic import BaseModel, ValidationError
+import sqlite3
 
 
 @dataclass(slots=True, frozen=True)
@@ -111,3 +116,118 @@ class HandlerRequestGetData(HandlerRequestWithAuthentication, ABC):
 	def _create_document(self) -> Mapping[str, Any]:
 		"""Создает документ."""
 		raise NotImplementedError()
+
+
+class HandlerRequestGetResource(HandlerRequestGetData, ABC):
+	"""Обработчик запроса на получение одного ресурса"""
+
+	_id: int
+
+	def __init__(self, id):
+		super().__init__()
+		self._id = id
+
+	def _get_orm_model(self, cls_model: type[db.Model]) -> db.Model:
+		"""Получает ORM модель."""
+		model = cls_model.query.get(self._id)
+		if model is None:
+			self._set_error_in_handler_result(
+				source=f"/{self._id}",
+				error=Errors.NOT_FOUND_PATH
+			)
+			raise HandlerError
+		return model
+
+
+class HandlerRequestGetAllResources(HandlerRequestGetData, ABC):
+	"""Обработчик запроса на получение много ресурсов"""
+
+	def __init__(self):
+		super().__init__()
+
+	def _get_orm_models(self, cls_model: type[db.Model]) -> list[db.Model]:
+		"""Получает ORM модели."""
+		return cls_model.query.all()
+
+
+class HandlerRequestGetAllResourcesUsingFilter(HandlerRequestGetData, ABC):
+	"""Обработчик запроса на получение много ресурсов используя фильтр"""
+
+	_query_string: str | None
+
+	def __init__(self, query_string):
+		super().__init__()
+		self._query_string = query_string
+
+	def _get_orm_models(self, cls_model: type[db.Model]) -> list[db.Model]:
+		"""Получает ORM модели."""
+		if self._query_string is None:
+			return cls_model.query.all()
+		fields = self._get_fields_query()
+		parser = QueryStringParser(string=self._query_string, fields=fields)
+		try:
+			models = GetterModelsUsingCustomFilter(cls_model, parser).get()
+		except ErrorQueryStringParsing as e:
+			self._set_error_in_handler_result(
+				source=e.source,
+				error=Errors.FILTER_ERROR
+			)
+			raise HandlerError
+		return models
+
+	@abstractmethod
+	def _get_fields_query(self) -> list[FieldQuery]:
+		"""Получает поля запроса."""
+		raise NotImplementedError()
+
+
+class HandlerRequestAddData(HandlerRequestWithAuthentication, ABC):
+	"""Обработчик запроса на добавление данных"""
+
+	_data_from_request: dict
+
+	def __init__(self, data_from_request):
+		super().__init__()
+		self._data_from_request = data_from_request
+
+	def handle(self) -> HandlerResult:
+		"""Обрабатывает запрос на получение данных."""
+		if not self._check_authentication_user():
+			return self._handler_result
+		try:
+			self._handler_result.document = self._create_document()
+		except HandlerError:
+			return self._handler_result
+		self._handler_result.status_code = 201
+		return self._handler_result
+
+	@abstractmethod
+	def _create_document(self) -> Mapping[str, Any]:
+		"""Создает документ."""
+		raise NotImplementedError()
+
+	def _get_model_data_post_request(self, model: type[BaseModel]) -> BaseModel:
+		"""Получает модель данных POST запроса."""
+		try:
+			model_data = model(**self._data_from_request)
+		except ValidationError as e:
+			self._set_error_in_handler_result(
+				source=(
+			f"Не удалось прочитать: {[fields['loc'] for fields in e.errors()]}"
+				),
+				error=Errors.BAD_REQUEST
+			)
+			raise HandlerError
+		return model_data
+
+	def _add_record_to_db(self, data: Mapping[str, Any], db_func: Callable)->int:
+		"""Добавляет запись в базу данных. Возвращает id записи."""
+		try:
+			id_record = db_func(data)
+		except sqlite3.IntegrityError:
+			self._set_error_in_handler_result(
+				source="ID не найдены",
+				error=Errors.BAD_REQUEST
+			)
+			raise HandlerError
+		return id_record

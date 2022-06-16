@@ -10,6 +10,7 @@ class ErrorGettingID(Exception):
 
 
 def get_id(path: str, href: str) -> int:
+    """Получает id."""
     template_href = for_api.make_href(path)
     pattern = re.compile(f"^({template_href})(/)(?P<id>\d+)$")
     match = pattern.match(href)

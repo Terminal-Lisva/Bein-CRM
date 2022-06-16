@@ -1,9 +1,7 @@
 from typing import TypedDict
-from .handler import HandlerRequestGetData, HandlerError
-from database.models.database import db
+from .handler import HandlerRequestGetAllResources, HandlerRequestGetResource
 from database.models.company import Company
 from controller.api import for_api
-from controller.api.errors import Errors
 
 
 class Meta(TypedDict):
@@ -25,57 +23,41 @@ class DocumentAllCompany(TypedDict):
     rows: list[DocumentCompany]
 
 
-class HandlerRequestGetAllCompany(HandlerRequestGetData):
+class HandlerRequestGetAllCompany(HandlerRequestGetAllResources):
     """Обработчик запроса на получение всех компаний"""
 
     def __init__(self):
         super().__init__()
 
-    def _get_model(self) -> db.Model:
-        """Получает модель."""
-        return Company.query.all()
-
-    def _create_document(self, model: db.Model) -> DocumentAllCompany:
+    def _create_document(self) -> DocumentAllCompany:
         """Создает документ."""
+        models = self._get_orm_models(cls_model=Company)
         meta = MetaAllCompany(
             href=for_api.make_href(path="/company"),
             type="company",
-            size=len(model)
+            size=len(models)
         )
         rows = [
             DocumentCompany(
                 meta=Meta(
-                    href=for_api.make_href(path=f"/company/{row.id}"),
+                    href=for_api.make_href(path=f"/company/{model.id}"),
                     type="company"
                 ),
-                id=row.id,
-                name=row.name
-            ) for row in model]
+                id=model.id,
+                name=model.name
+            ) for model in models]
         return DocumentAllCompany(meta=meta, rows=rows)
 
 
-class HandlerRequestGetCompany(HandlerRequestGetData):
+class HandlerRequestGetCompany(HandlerRequestGetResource):
     """Обработчик запроса на получение компании"""
 
-    __company_id: int
-
     def __init__(self, company_id):
-        super().__init__()
-        self.__company_id = company_id
+        super().__init__(company_id)
 
-    def _get_model(self) -> db.Model:
-        """Получает модель."""
-        model = Company.query.get(self.__company_id)
-        if model is None:
-            self._set_error_in_handler_result(
-                source=f"/company/{self.__company_id}",
-                error=Errors.NOT_FOUND_PATH
-            )
-            raise HandlerError
-        return model
-
-    def _create_document(self, model: db.Model) -> DocumentCompany:
+    def _create_document(self) -> DocumentCompany:
         """Создает документ."""
+        model = self._get_orm_model(cls_model=Company)
         return DocumentCompany(
             meta=Meta(
                 href=for_api.make_href(path=f"/company/{model.id}"),

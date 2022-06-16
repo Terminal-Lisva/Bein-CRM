@@ -2,17 +2,14 @@ from .db import SQLite, sqlite3
 from typing import TypedDict
 
 
-class DataForAdd(TypedDict):
+class DataForAddCodeDoc(TypedDict):
 	id_bpm: int
 	id_type_doc: int
 	id_company: int
 	id_creator: int
 
 
-ErrorAddingCodeDoc = sqlite3.IntegrityError
-
-
-def add_code_doc(data: DataForAdd) -> int:
+def add_code_doc(data: DataForAddCodeDoc) -> int:
 	"""Добавляет код документа."""
 	with SQLite() as cursor:
 		cursor.execute("PRAGMA foreign_keys = ON")
