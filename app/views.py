@@ -7,7 +7,7 @@ from resources.pages import App, Account
 from resources.account import AccountPassword
 from resources.company import AllCompany, Company
 from resources.bpm import AllBpm
-from resources.docs import AllTypesDocs, AllCodesDocs, CodeDoc
+from resources.docs import AllTypesDocs, AllCodesDocs, CodeDoc, AllDocs
 
 
 api = Api(app)
@@ -27,6 +27,7 @@ api.add_resource(AllBpm, f'/{prefix_api}/bpm')
 api.add_resource(AllTypesDocs, f'/{prefix_api}/docs/types')
 api.add_resource(AllCodesDocs, f'/{prefix_api}/docs/code')
 api.add_resource(CodeDoc, f'/{prefix_api}/docs/code/<int:id_code_doc>')
+api.add_resource(AllDocs, f'/{prefix_api}/docs/')
 
 #PAGES:
 api.add_resource(App, '/app')

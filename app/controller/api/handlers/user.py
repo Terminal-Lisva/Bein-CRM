@@ -25,7 +25,7 @@ class DocumentUser(TypedDict):
 
 
 class HandlerRequestActivationUser(ABC):
-    """Обоработчик запроса изменения пользователя"""
+    """Обоработчик запроса активации пользователя"""
 
     _token: str
     _password: str

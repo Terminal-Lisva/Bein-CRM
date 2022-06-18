@@ -1,8 +1,8 @@
 from pydantic import BaseModel, validator
 from controller.api import post_req_parser
 from typing import TypedDict
-from .handler import (HandlerRequestAddData, HandlerRequestWithAuthentication,
-HandlerResult, HandlerError, HandlerRequestGetAllResourcesUsingFilter)
+from .handler import (HandlerRequestAddData, HandlerRequestDelData,
+HandlerError, HandlerRequestGetAllResourcesUsingFilter)
 from controller.api.errors import Errors
 from database import db_docs
 from database.models.code_doc import CodeDoc
@@ -63,40 +63,51 @@ class DocumentCodeDoc(TypedDict):
     code: str
     creator: Meta
     company: Meta
-    status: int
+    used: bool
 
 
 class HandlerRequestAddCodeDoc(HandlerRequestAddData):
     """Обработчик запроса на добавление кода документа"""
 
     def __init__(self, data_from_request):
-        super().__init__(data_from_request)
+        super().__init__(data_from_request, model=ModelCodeDoc)
 
     def _forms_code_doc(self, id_code_doc: int) -> str:
         """Формирует код документа."""
         code_doc = CodeDoc.query.filter_by(id=id_code_doc).first()
         return f"{code_doc.bpm.code}-{code_doc.type_doc.abv}{code_doc.number}"
 
-    def _create_document(self) -> DocumentCodeDoc:
-        """Создает документ."""
-        model_data = self._get_model_data_post_request(ModelCodeDoc)
-        id_code_doc = self._add_record_to_db(
-            data=db_docs.DataForAddCodeDoc(
-                id_bpm=model_data.bpm,
-                id_type_doc=model_data.type_doc,
-                id_company=model_data.company,
-                id_creator=self._authentication_user.user_id
-            ),
-            db_func = db_docs.add_code_doc
+    def _add_record_to_db(self, model_data: ModelCodeDoc) -> int:
+        """Добавляет запись в базу данных. Возвращает id записи."""
+        data = db_docs.DataForAddCodeDoc(
+            id_bpm=model_data.bpm,
+            id_type_doc=model_data.type_doc,
+            id_company=model_data.company,
+            id_creator=self._authentication_user.user_id
         )
-        code = self._forms_code_doc(id_code_doc)
+        try:
+            id_record = db_docs.add_code_doc(data)
+        except Exception:
+            self._set_error_in_handler_result(
+                source="ID не найдены",
+                error=Errors.BAD_REQUEST
+            )
+            raise HandlerError
+        return id_record
+
+    def _create_document(
+        self,
+        model_data: ModelCodeDoc,
+        id_code_doc: int
+        ) -> DocumentCodeDoc:
+        """Создает документ."""
         return DocumentCodeDoc(
             meta=Meta(
                 href=for_api.make_href(path=f"/docs/code/{id_code_doc}"),
                 type="document management system"
             ),
             id=id_code_doc,
-            code=code,
+            code=self._forms_code_doc(id_code_doc),
             creator=Meta(
                 href=for_api.make_href(
                     path=f"/users/{self._authentication_user.user_id}"
@@ -107,66 +118,36 @@ class HandlerRequestAddCodeDoc(HandlerRequestAddData):
                 href=for_api.make_href(path=f"/company/{model_data.company}"),
                 type="company"
             ),
-            status=1
+            used=False
         )
 
 
-class HandlerRequestDelCodeDoc(HandlerRequestWithAuthentication):
+class HandlerRequestDelCodeDoc(HandlerRequestDelData):
     """Обработчик запроса на удаление кода документа"""
 
-    _id_code_doc: int
-
     def __init__(self, id_code_doc):
-        super().__init__()
-        self._id_code_doc = id_code_doc
+        super().__init__(id_code_doc, cls_orm_model=CodeDoc)
 
-    def handle(self) -> HandlerResult:
-        """Обрабатывает запрос на получение данных."""
-        if not self._check_authentication_user():
-            return self._handler_result
-        try:
-            code_doc = self._get_model()
-        except HandlerError:
-            return self._handler_result
-        if not self._check_creator_code_doc(code_doc):
+    def _make_appeal_db(self) -> None:
+        """Делает обращение к БД."""
+        self._check_code_doc()
+        db_docs.del_code_doc(self._id)
+
+    def _check_code_doc(self) -> None:
+        """Проверяет код документа."""
+        code_doc = self._get_orm_model()
+        if code_doc.id_creator != self._authentication_user.user_id:
             self._set_error_in_handler_result(
                 source="Вы не являетесь создателем кода документа",
                 error=Errors.BAD_REQUEST
             )
-            return self._handler_result
-        elif not self._check_status_code_doc(code_doc):
+            raise HandlerError
+        elif code_doc.used != 0:
             self._set_error_in_handler_result(
                 source="Документ с таким кодом уже зарегистрирован",
                 error=Errors.BAD_REQUEST
             )
-            return self._handler_result
-        self._delete_code_doc()
-        self._handler_result.document = {}
-        self._handler_result.status_code = 204
-        return self._handler_result
-
-    def _get_model(self) -> CodeDoc:
-        """Получает модель."""
-        code_doc = CodeDoc.query.filter_by(id=self._id_code_doc).first()
-        if code_doc is None:
-            self._set_error_in_handler_result(
-                source=f"/docs/code/{self._id_code_doc}",
-                error=Errors.NOT_FOUND_PATH
-            )
             raise HandlerError
-        return code_doc
-
-    def _check_creator_code_doc(self, code_doc: CodeDoc) -> bool:
-        """Проверить создателя кода документа."""
-        return code_doc.id_creator == self._authentication_user.user_id
-
-    def _check_status_code_doc(self, code_doc: CodeDoc) -> bool:
-        """Проверяет статус кода документа."""
-        return code_doc.status == 1
-
-    def _delete_code_doc(self) -> None:
-        """Удаляет код документа."""
-        db_docs.del_code_doc(self._id_code_doc)
 
 
 class MetaAllCodeDocs(TypedDict):
@@ -183,10 +164,10 @@ class HandlerRequestGetAllCodeDocs(HandlerRequestGetAllResourcesUsingFilter):
     """Обработчик запроса на получение всех кодов документов"""
 
     def __init__(self, query_string):
-        super().__init__(query_string)
+        super().__init__(query_string, cls_orm_model=CodeDoc)
 
     def _get_fields_query(self) -> list[FieldQuery]:
-        """Получает поля запроса."""
+        """Получает запрашиваемые поля."""
         return [
             FieldQuery(
                 name_in_db='id_creator',
@@ -197,32 +178,31 @@ class HandlerRequestGetAllCodeDocs(HandlerRequestGetAllResourcesUsingFilter):
                 type=str
             ),
             FieldQuery(
-                name_in_db='status',
-                name='status',
+                name_in_db='used',
+                name='used',
                 operators=['!=', '='],
                 prefix="",
                 null=False,
-                type=int
+                type=bool
             )
         ]
 
-    def _create_document(self) -> DocumentAllCodeDocs:
+    def _create_document(self, orm_models:list[CodeDoc]) -> DocumentAllCodeDocs:
         """Создает документ."""
-        models = self._get_orm_models(CodeDoc)
         meta = MetaAllCodeDocs(
             href=for_api.make_href(path="/docs/code"),
             type="document management system",
-            size=len(models)
+            size=len(orm_models)
         )
         rows = [
             DocumentCodeDoc(
-                meta = Meta(
+                meta=Meta(
                     href=for_api.make_href(path=f"/docs/code/{model.id}"),
                     type="document management system"
                 ),
-                id = model.id,
-                code = f"{model.bpm.code}-{model.type_doc.abv}{model.number}",
-                creator = Meta(
+                id=model.id,
+                code=f"{model.bpm.code}-{model.type_doc.abv}{model.number}",
+                creator=Meta(
                     href=for_api.make_href(path=f"/users/{model.id_creator}"),
                     type="app users"
                 ),
@@ -230,6 +210,6 @@ class HandlerRequestGetAllCodeDocs(HandlerRequestGetAllResourcesUsingFilter):
                     href=for_api.make_href(path=f"/company/{model.id_company}"),
                     type="company"
                 ),
-                status=model.status
-            ) for model in models]
+                used=bool(model.used)
+            ) for model in orm_models]
         return DocumentAllCodeDocs(meta=meta, rows=rows)

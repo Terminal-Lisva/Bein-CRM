@@ -27,15 +27,14 @@ class HandlerRequestGetAllCompany(HandlerRequestGetAllResources):
     """Обработчик запроса на получение всех компаний"""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(cls_orm_model=Company)
 
-    def _create_document(self) -> DocumentAllCompany:
+    def _create_document(self, orm_models: list[Company]) -> DocumentAllCompany:
         """Создает документ."""
-        models = self._get_orm_models(cls_model=Company)
         meta = MetaAllCompany(
             href=for_api.make_href(path="/company"),
             type="company",
-            size=len(models)
+            size=len(orm_models)
         )
         rows = [
             DocumentCompany(
@@ -45,7 +44,7 @@ class HandlerRequestGetAllCompany(HandlerRequestGetAllResources):
                 ),
                 id=model.id,
                 name=model.name
-            ) for model in models]
+            ) for model in orm_models]
         return DocumentAllCompany(meta=meta, rows=rows)
 
 
@@ -53,16 +52,15 @@ class HandlerRequestGetCompany(HandlerRequestGetResource):
     """Обработчик запроса на получение компании"""
 
     def __init__(self, company_id):
-        super().__init__(company_id)
+        super().__init__(company_id, cls_orm_model=Company)
 
-    def _create_document(self) -> DocumentCompany:
+    def _create_document(self, orm_model: Company) -> DocumentCompany:
         """Создает документ."""
-        model = self._get_orm_model(cls_model=Company)
         return DocumentCompany(
             meta=Meta(
-                href=for_api.make_href(path=f"/company/{model.id}"),
+                href=for_api.make_href(path=f"/company/{orm_model.id}"),
                 type="company"
             ),
-            id=model.id,
-            name=model.name
+            id=orm_model.id,
+            name=orm_model.name
         )

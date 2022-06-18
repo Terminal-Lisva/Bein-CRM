@@ -28,15 +28,14 @@ class HandlerRequestGetAllTypesDocs(HandlerRequestGetAllResources):
     """Обработчик запроса на получение всех типов документов"""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(cls_orm_model=TypeDoc)
 
-    def _create_document(self) -> DocumentAllTypesDocs:
+    def _create_document(self, orm_models:list[TypeDoc])-> DocumentAllTypesDocs:
         """Создает документ."""
-        models = self._get_orm_models(cls_model=TypeDoc)
         meta = MetaAllTypesDocs(
             href=for_api.make_href(path="/docs/types"),
             type="document management system",
-            size=len(models)
+            size=len(orm_models)
         )
         rows = [
             DocumentTypeDoc(
@@ -47,5 +46,5 @@ class HandlerRequestGetAllTypesDocs(HandlerRequestGetAllResources):
                 id=model.id,
                 name=model.name,
                 layer=model.layer
-            ) for model in models]
+            ) for model in orm_models]
         return DocumentAllTypesDocs(meta=meta, rows=rows)

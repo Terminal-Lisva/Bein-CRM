@@ -8,7 +8,6 @@ from controller.api.query_string_parser import (QueryStringParser, FieldQuery,
 ErrorQueryStringParsing)
 from database.models.filters import GetterModelsUsingCustomFilter
 from pydantic import BaseModel, ValidationError
-import sqlite3
 
 
 @dataclass(slots=True, frozen=True)
@@ -34,11 +33,6 @@ class HandlerRequest(Protocol):
 	def handle(self) -> HandlerResult:
 		"""Обрабатывает соответствующий запрос."""
 		...
-
-
-#class AuthenticationErrors(Enum):
-#	"""Ошибки аутентификации"""
-#	NO_AUTHENTICATION = 1
 
 
 class HandlerRequestWithAuthentication(ABC):
@@ -95,41 +89,32 @@ class HandlerError(Exception):
 	pass
 
 
-class HandlerRequestGetData(HandlerRequestWithAuthentication, ABC):
-	"""Обработчик запроса получения данных"""
+class HandlerRequestGetResource(HandlerRequestWithAuthentication, ABC):
+	"""Обработчик запроса на получение ресурса"""
 
-	def __init__(self):
+	_id: int
+	_cls_orm_model: type[db.Model]
+
+	def __init__(self, id, cls_orm_model):
 		super().__init__()
+		self._id = id
+		self._cls_orm_model = cls_orm_model
 
 	def handle(self) -> HandlerResult:
-		"""Обрабатывает запрос на получение данных."""
+		"""Обрабатывает запрос на получение ресурса."""
 		if not self._check_authentication_user():
 			return self._handler_result
 		try:
-			self._handler_result.document = self._create_document()
+			orm_model = self._get_orm_model()
+			self._handler_result.document = self._create_document(orm_model)
 		except HandlerError:
 			return self._handler_result
 		self._handler_result.status_code = 200
 		return self._handler_result
 
-	@abstractmethod
-	def _create_document(self) -> Mapping[str, Any]:
-		"""Создает документ."""
-		raise NotImplementedError()
-
-
-class HandlerRequestGetResource(HandlerRequestGetData, ABC):
-	"""Обработчик запроса на получение одного ресурса"""
-
-	_id: int
-
-	def __init__(self, id):
-		super().__init__()
-		self._id = id
-
-	def _get_orm_model(self, cls_model: type[db.Model]) -> db.Model:
+	def _get_orm_model(self) -> db.Model:
 		"""Получает ORM модель."""
-		model = cls_model.query.get(self._id)
+		model = self._cls_orm_model.query.get(self._id)
 		if model is None:
 			self._set_error_in_handler_result(
 				source=f"/{self._id}",
@@ -138,35 +123,75 @@ class HandlerRequestGetResource(HandlerRequestGetData, ABC):
 			raise HandlerError
 		return model
 
+	@abstractmethod
+	def _create_document(self, orm_model: db.Model) -> Mapping[str, Any]:
+		"""Создает документ."""
+		raise NotImplementedError()
 
-class HandlerRequestGetAllResources(HandlerRequestGetData, ABC):
-	"""Обработчик запроса на получение много ресурсов"""
+
+class HandlerRequestGetResources(HandlerRequestWithAuthentication, ABC):
+	"""Обработчик запроса на получение ресурсов"""
 
 	def __init__(self):
 		super().__init__()
 
-	def _get_orm_models(self, cls_model: type[db.Model]) -> list[db.Model]:
+	def handle(self) -> HandlerResult:
+		"""Обрабатывает запрос на получение ресурсов."""
+		if not self._check_authentication_user():
+			return self._handler_result
+		try:
+			orm_models = self._get_orm_models()
+			self._handler_result.document = self._create_document(orm_models)
+		except HandlerError:
+			return self._handler_result
+		self._handler_result.status_code = 200
+		return self._handler_result
+
+	@abstractmethod
+	def _get_orm_models(self) -> list[db.Model]:
 		"""Получает ORM модели."""
-		return cls_model.query.all()
+		raise NotImplementedError()
+
+	@abstractmethod
+	def _create_document(self, orm_models: list[db.Model]) -> Mapping[str, Any]:
+		"""Создает документ."""
+		raise NotImplementedError()
 
 
-class HandlerRequestGetAllResourcesUsingFilter(HandlerRequestGetData, ABC):
+class HandlerRequestGetAllResources(HandlerRequestGetResources, ABC):
+	"""Обработчик запроса на получение много ресурсов"""
+
+	_cls_orm_model: type[db.Model]
+
+	def __init__(self, cls_orm_model):
+		super().__init__()
+		self._cls_orm_model = cls_orm_model
+
+	def _get_orm_models(self) -> list[db.Model]:
+		"""Получает ORM модели."""
+		return self._cls_orm_model.query.all()
+
+
+class HandlerRequestGetAllResourcesUsingFilter(HandlerRequestGetResources, ABC):
 	"""Обработчик запроса на получение много ресурсов используя фильтр"""
 
 	_query_string: str | None
+	_cls_orm_model: type[db.Model]
 
-	def __init__(self, query_string):
+	def __init__(self, query_string, cls_orm_model):
 		super().__init__()
 		self._query_string = query_string
+		self._cls_orm_model = cls_orm_model
 
-	def _get_orm_models(self, cls_model: type[db.Model]) -> list[db.Model]:
+	def _get_orm_models(self) -> list[db.Model]:
 		"""Получает ORM модели."""
 		if self._query_string is None:
-			return cls_model.query.all()
+			return self._cls_orm_model.query.all()
 		fields = self._get_fields_query()
 		parser = QueryStringParser(string=self._query_string, fields=fields)
 		try:
-			models = GetterModelsUsingCustomFilter(cls_model, parser).get()
+			models = GetterModelsUsingCustomFilter(
+				self._cls_orm_model, parser).get()
 		except ErrorQueryStringParsing as e:
 			self._set_error_in_handler_result(
 				source=e.source,
@@ -177,39 +202,25 @@ class HandlerRequestGetAllResourcesUsingFilter(HandlerRequestGetData, ABC):
 
 	@abstractmethod
 	def _get_fields_query(self) -> list[FieldQuery]:
-		"""Получает поля запроса."""
+		"""Получает запрашиваемые поля."""
 		raise NotImplementedError()
 
 
-class HandlerRequestAddData(HandlerRequestWithAuthentication, ABC):
-	"""Обработчик запроса на добавление данных"""
+class HandlerPostRequest(HandlerRequestWithAuthentication, ABC):
+	"""Обработчик POST запроса"""
 
 	_data_from_request: dict
+	_model: type[BaseModel]
 
-	def __init__(self, data_from_request):
+	def __init__(self, data_from_request, model):
 		super().__init__()
 		self._data_from_request = data_from_request
+		self._model = model
 
-	def handle(self) -> HandlerResult:
-		"""Обрабатывает запрос на получение данных."""
-		if not self._check_authentication_user():
-			return self._handler_result
-		try:
-			self._handler_result.document = self._create_document()
-		except HandlerError:
-			return self._handler_result
-		self._handler_result.status_code = 201
-		return self._handler_result
-
-	@abstractmethod
-	def _create_document(self) -> Mapping[str, Any]:
-		"""Создает документ."""
-		raise NotImplementedError()
-
-	def _get_model_data_post_request(self, model: type[BaseModel]) -> BaseModel:
+	def _get_model_data_post_request(self) -> BaseModel:
 		"""Получает модель данных POST запроса."""
 		try:
-			model_data = model(**self._data_from_request)
+			model_data = self._model(**self._data_from_request)
 		except ValidationError as e:
 			self._set_error_in_handler_result(
 				source=(
@@ -220,14 +231,113 @@ class HandlerRequestAddData(HandlerRequestWithAuthentication, ABC):
 			raise HandlerError
 		return model_data
 
-	def _add_record_to_db(self, data: Mapping[str, Any], db_func: Callable)->int:
-		"""Добавляет запись в базу данных. Возвращает id записи."""
+
+class HandlerRequestAddData(HandlerPostRequest, ABC):
+	"""Обработчик запроса на добавление данных"""
+
+	def __init__(self, data_from_request, model):
+		super().__init__(data_from_request, model)
+
+	def handle(self) -> HandlerResult:
+		"""Обрабатывает запрос на добавление данных."""
+		if not self._check_authentication_user():
+			return self._handler_result
 		try:
-			id_record = db_func(data)
-		except sqlite3.IntegrityError:
+			model_data = self._get_model_data_post_request()
+			id = self._add_record_to_db(model_data)
+		except HandlerError:
+			return self._handler_result
+		self._handler_result.document = self._create_document(model_data, id)
+		self._handler_result.status_code = 201
+		return self._handler_result
+
+	@abstractmethod
+	def _add_record_to_db(self, model_data: BaseModel) -> int:
+		"""Добавляет запись в базу данных. Возвращает id записи."""
+		raise NotImplementedError()
+
+	@abstractmethod
+	def _create_document(
+		self, model_data: BaseModel, id: int) -> Mapping[str, Any]:
+		"""Создает документ."""
+		raise NotImplementedError()
+
+
+class HandlerRequestChangeData(HandlerPostRequest, ABC):
+	"""Обработчик запроса на изменение данных"""
+
+	_id: int
+	_cls_orm_model: type[db.Model]
+
+	def __init__(self, data_from_request, model, id, cls_orm_model):
+		super().__init__(data_from_request, model)
+		self._id = id
+		self._cls_orm_model = cls_orm_model
+
+	def handle(self) -> HandlerResult:
+		"""Обрабатывает запрос на изменение данных."""
+		if not self._check_authentication_user():
+			return self._handler_result
+		try:
+			model_data = self._get_model_data_post_request()
+			self._change_record_to_db(model_data)
+			orm_model = self._get_orm_model()
+		except HandlerError:
+			return self._handler_result
+		self._handler_result.document = self._create_document(orm_model)
+		self._handler_result.status_code = 200
+		return self._handler_result
+
+	@abstractmethod
+	def _change_record_to_db(self, model_data: BaseModel) -> None:
+		"""Изменяет запись в базе данных."""
+		raise NotImplementedError()
+
+	def _get_orm_model(self) -> db.Model:
+		"""Получает ORM модель. Исключения не должно быть."""
+		return self._cls_orm_model.query.get(self._id)
+
+	@abstractmethod
+	def _create_document(self, orm_model: db.Model) -> Mapping[str, Any]:
+		"""Создает документ."""
+		raise NotImplementedError()
+
+
+class HandlerRequestDelData(HandlerRequestWithAuthentication, ABC):
+	"""Обработчик запроса на удаление данных"""
+
+	_id: int
+	_cls_orm_model: type[db.Model]
+
+	def __init__(self, id, cls_orm_model):
+		super().__init__()
+		self._id = id
+		self._cls_orm_model = cls_orm_model
+
+	def handle(self) -> HandlerResult:
+		"""Обрабатывает запрос на получение данных."""
+		if not self._check_authentication_user():
+			return self._handler_result
+		try:
+			self._make_appeal_db()
+		except HandlerError:
+			return self._handler_result
+		self._handler_result.document = {}
+		self._handler_result.status_code = 204
+		return self._handler_result
+
+	def _get_orm_model(self) -> db.Model:
+		"""Получает модель."""
+		orm_model = self._cls_orm_model.query.get(self._id)
+		if orm_model is None:
 			self._set_error_in_handler_result(
-				source="ID не найдены",
-				error=Errors.BAD_REQUEST
+				source=f"/{self._id}",
+				error=Errors.NOT_FOUND_PATH
 			)
 			raise HandlerError
-		return id_record
+		return orm_model
+
+	@abstractmethod
+	def _make_appeal_db(self) -> None:
+		"""Делает обращение к БД."""
+		raise NotImplementedError()

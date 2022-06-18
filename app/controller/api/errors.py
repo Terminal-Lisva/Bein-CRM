@@ -16,7 +16,6 @@ class Errors(Enum):
 	FILTER_ERROR = "Ошибка фильтрации", 400
 	BAD_REQUEST = "Некорректный запрос", 400
 
-
 #Пример ошибки:
 #{
 #	"source": "Пароль: qwerty123",

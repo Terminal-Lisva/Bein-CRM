@@ -32,7 +32,7 @@ class HandlerRequestGetAllBpm(HandlerRequestGetAllResourcesUsingFilter):
     """Обработчик запроса на получение всех бизнес процессов"""
 
     def __init__(self, query_string):
-        super().__init__(query_string)
+        super().__init__(query_string, cls_orm_model=Bpm)
 
     def _get_fields_query(self) -> list[FieldQuery]:
         """Получает поля запроса."""
@@ -45,31 +45,30 @@ class HandlerRequestGetAllBpm(HandlerRequestGetAllResourcesUsingFilter):
             type=str
         )]
 
-    def _create_document(self) -> DocumentAllBpm:
+    def _create_document(self, orm_models: list[Bpm]) -> DocumentAllBpm:
         """Создает документ."""
-        models = self._get_orm_models(cls_model=Bpm)
         meta = MetaAllBpm(
             href=for_api.make_href(path="/bpm"),
             type="process management",
-            size=len(models)
+            size=len(orm_models)
         )
         rows = [
             DocumentBpm(
-                meta = Meta(
+                meta=Meta(
                     href=for_api.make_href(path=f"/bpm/{model.id}"),
                     type="process management"
                 ),
-                id = model.id,
-                code = model.code,
-                name = model.name,
-                lvl = model.lvl,
-                company = Meta(
+                id=model.id,
+                code=model.code,
+                name=model.name,
+                lvl=model.lvl,
+                company=Meta(
                     href=for_api.make_href(path=f"/company/{model.id_company}"),
                     type="company"
                 ),
-                parent = Meta(
+                parent=Meta(
                     href=for_api.make_href(path=f"/bpm/{model.id_parent}"),
                     type="process management"
                 ) if model.lvl > 1 else None,
-            ) for model in models]
+            ) for model in orm_models]
         return DocumentAllBpm(meta=meta, rows=rows)

@@ -157,7 +157,7 @@ class QueryStringParser:
             return LogicCondition(
                 key=field.name_in_db,
                 operator=operator,
-                value=value
+                value={'true': 1, 'false': 0}[value]
             )
         elif field.type == int and value.isdecimal():
             return LogicCondition(

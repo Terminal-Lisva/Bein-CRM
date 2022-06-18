@@ -60,3 +60,16 @@
 	FOREIGN KEY (id_company) REFERENCES company(id),
 	FOREIGN KEY (id_creator) REFERENCES users(id)
 );"""
+
+"""CREATE TABLE documents (
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	id_code_doc INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	date_start TEXT NOT NULL,
+	date_finish TEXT NOT NULL,
+	id_responsible INTEGER NOT NULL,
+	version INTEGER NOT NULL DEFAULT(1),
+	status INTEGER NOT NULL DEFAULT(1),
+	FOREIGN KEY (id_code_doc) REFERENCES code_documents(id),
+	FOREIGN KEY (id_responsible) REFERENCES users(id)
+);"""
