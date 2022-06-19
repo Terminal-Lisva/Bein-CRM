@@ -1,13 +1,19 @@
-from .handler import HandlerResult, Error, HandlerError
-from abc import ABC
+from pydantic import BaseModel
+from typing import TypedDict
+from .handler import HandlerPostRequest, HandlerResult, HandlerError
+from abc import ABC, abstractmethod
 from utilities.validations import ValidationInvitationToken, ValidationPassword
 from controller.api.errors import Errors
 from database import db_auth
-from typing import TypedDict
-from database.models.user import Users
+from database.models.user import User
 from controller.api import for_api
 from utilities.other import (records_log_user_registration,
 records_log_user_restorer, HashingData)
+
+
+class ModelActivationUser(BaseModel):
+    token: str
+    password: str
 
 
 class Meta(TypedDict):
@@ -24,70 +30,77 @@ class DocumentUser(TypedDict):
     company: Meta
 
 
-class HandlerRequestActivationUser(ABC):
-    """Обоработчик запроса активации пользователя"""
+class HandlerRequestActivationUser(HandlerPostRequest, ABC):
+    """Обоработчик запроса на активацию пользователя"""
 
-    _token: str
-    _password: str
-    _handler_result: HandlerResult
+    def __init__(self, data_from_request):
+        super().__init__(data_from_request, model=ModelActivationUser)
 
-    def __init__(self, token, password):
-        self._token = token
-        self._password = password
-        self._handler_result = HandlerResult()
+    def handle(self) -> HandlerResult:
+        """Обрабатывает запрос на активацию пользователя."""
+        try:
+            model_data = self._get_model_data_post_request()
+            self._check_model_data(model_data)
+            user_id = self._get_user_id(model_data)
+            self._make_appeal_to_db(user_id, model_data)
+        except HandlerError:
+            return self._handler_result
+        orm_model = self._get_orm_model(user_id)
+        self._handler_result.document = self._create_document(orm_model)
+        self._handler_result.status_code = 201
+        return self._handler_result
 
-    def _check_request_data(self) -> bool:
-        """Проверяет данные из запроса."""
-        if not ValidationInvitationToken(self._token).get_result():
-            message, status_code = Errors.NOT_VALID_TOKEN.value
-            self._handler_result.error = Error(
-                source=f"Токен приглашения: {self._token}",
-                type=Errors.NOT_VALID_TOKEN.name,
-                message=message
+    def _check_model_data(self, model_data: ModelActivationUser) -> None:
+        """Проверяет модель данных."""
+        if not ValidationInvitationToken(model_data.token).get_result():
+            self._set_error_in_handler_result(
+                source=f"Токен приглашения: {model_data.token}",
+                error=Errors.NOT_VALID_TOKEN
             )
-            self._handler_result.status_code = status_code
-            return False
-        elif not ValidationPassword(self._password).get_result():
-            message, status_code = Errors.NOT_VALID_PASSWORD.value
-            self._handler_result.error = Error(
-                source=f"Пароль: {self._password}",
-                type=Errors.NOT_VALID_PASSWORD.name,
-                message=message
+            raise HandlerError
+        elif not ValidationPassword(model_data.password).get_result():
+            self._set_error_in_handler_result(
+                source=f"Пароль: {model_data.password}",
+                error=Errors.NOT_VALID_PASSWORD
             )
-            self._handler_result.status_code = status_code
-            return False
-        return True
+            raise HandlerError
 
-    def _get_user_id(self) -> int:
+    def _get_user_id(self, model_data: ModelActivationUser) -> int:
         """Получает id пользователя из базы данных.
         Если пользователь отсутствует в базе данных
         устанавливает соответствующую ошибку операции и вызывает исключение."""
-        user_id = db_auth.get_user_id(self._token)
+        user_id = db_auth.get_user_id(model_data.token)
         if user_id is None:
-            message, status_code = Errors.NO_TOKEN.value
-            self._handler_result.error = Error(
-                source=f"Токен приглашения: {self._token}",
-                type=Errors.NO_TOKEN.name,
-                message=message
+            self._set_error_in_handler_result(
+                source=f"Токен приглашения: {model_data.token}",
+                error=Errors.NO_TOKEN
             )
-            self._handler_result.status_code = status_code
             raise HandlerError
         return user_id
 
-    def _create_document(self, user_id: int) -> DocumentUser:
+    @abstractmethod
+    def _make_appeal_to_db(
+        self, user_id: int, model_data: ModelActivationUser) -> None:
+        """Делает обращение к БД."""
+        raise NotImplementedError()
+
+    def _get_orm_model(self, user_id: int) -> User:
+        """Получает ORM модель."""
+        orm_model = User.query.get(user_id)
+
+    def _create_document(self, orm_model: User) -> DocumentUser:
         """Создает документ."""
-        user = Users.query.get(user_id)
         return DocumentUser(
-            meta = Meta(
-                href=for_api.make_href(path=f"/users/{user.id}"),
+            meta=Meta(
+                href=for_api.make_href(path=f"/users/{orm_model.id}"),
                 type="app users"
             ),
-            id = user.id,
-            last_name = user.last_name,
-            first_name = user.first_name,
-            patronymic = user.patronymic,
-            company = Meta(
-                href=for_api.make_href(path=f"/company/{user.company_id}"),
+            id=orm_model.id,
+            last_name=orm_model.last_name,
+            first_name=orm_model.first_name,
+            patronymic=orm_model.patronymic,
+            company=Meta(
+                href=for_api.make_href(path=f"/company/{orm_model.company_id}"),
                 type="company"
             )
         )
@@ -96,71 +109,43 @@ class HandlerRequestActivationUser(ABC):
 class HandlerRequestAddUser(HandlerRequestActivationUser):
     """Обоработчик запроса на добавление пользователя"""
 
-    def __init__(self, token, password):
-        super().__init__(token, password)
+    def __init__(self, data_from_request):
+        super().__init__(data_from_request)
 
-    def handle(self) -> HandlerResult:
-        """Обрабатывает запрос на регистрацию пользователя."""
-        if not self._check_request_data():
-            return self._handler_result
-        try:
-            user_id = self._get_user_id()
-            self._add_user_to_db(user_id)
-        except HandlerError:
-            return self._handler_result
-        records_log_user_registration(user_id)
-        self._handler_result.document = self._create_document(user_id)
-        self._handler_result.status_code = 201
-        return self._handler_result
-
-    def _add_user_to_db(self, user_id: int) -> None:
+    def _make_appeal_to_db(
+        self, user_id: int, model_data: ModelActivationUser) -> None:
         """Добавляет пользователя в базу данных.
         Если пользователь уже имеется в базе данных
         устанавливает соответствующую ошибку операции и вызывает исключение."""
         if not db_auth.check_user_authentication(user_id):
-            message, status_code = Errors.USER_IS_BD.value
-            self._handler_result.error = Error(
+            self._set_error_in_handler_result(
                 source=f"id: {user_id}",
-                type=Errors.USER_IS_BD.name,
-                message=message
+                error=Errors.USER_IS_BD
             )
-            self._handler_result.status_code = status_code
             raise HandlerError
-        hashed_password = HashingData().calculate_hash(self._password)
+        hashed_password = HashingData().calculate_hash(model_data.password)
         db_auth.add_user_authentication(user_id, hashed_password)
+        records_log_user_registration(user_id)
 
 
 class HandlerRequestRestoreUser(HandlerRequestActivationUser):
     """Обработчик запроса на восстановление пользователя"""
 
-    def __init__(self, token, password):
-        super().__init__(token, password)
+    def __init__(self, data_from_request):
+        super().__init__(data_from_request)
 
-    def handle(self) -> HandlerResult:
-        """Обрабатывает запрос на восстановление пароля."""
-        if not self._check_request_data():
-            return self._handler_result
-        try:
-            user_id = self._get_user_id()
-            self._restores_user_to_db(user_id)
-        except HandlerError:
-            return self._handler_result
-        records_log_user_restorer(user_id)
-        document = self._create_document(user_id)
-        return HandlerResult(document, status_code=201)
-
-    def _restores_user_to_db(self, user_id: int) -> None:
+    def _make_appeal_to_db(
+        self, user_id: int, model_data: ModelActivationUser) -> None:
         """Восстанавливает пользователя в базе данных.
         Если пользователя нет в базе данных
         устанавливает соответствующую ошибку операции и вызывает исключение."""
         if db_auth.check_user_authentication(user_id):
-            message, status_code = Errors.USER_IS_NOT_BD.value
-            self._handler_result.error = Error(
+            self._set_error_in_handler_result(
                 source=f"id: {user_id}",
-                type=Errors.USER_IS_NOT_BD.name,
-                message=message
+                error=Errors.USER_IS_NOT_BD
             )
-            self._handler_result.status_code = status_code
+            raise HandlerError
         db_auth.remove_user_authentication(user_id)
-        hashed_password = HashingData().calculate_hash(self._password)
+        hashed_password = HashingData().calculate_hash(model_data.password)
         db_auth.add_user_authentication(user_id, hashed_password)
+        records_log_user_restorer(user_id)

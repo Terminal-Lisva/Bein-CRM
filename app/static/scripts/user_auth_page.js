@@ -1,3 +1,5 @@
+import { sendDataToServer } from "./funcs.js";
+
 document.addEventListener("DOMContentLoaded", function () {
     //общие элементы
     const spinner = document.getElementById("Spinner");
@@ -132,16 +134,6 @@ document.addEventListener("DOMContentLoaded", function () {
         button.setAttribute("type", "submit");
         button.textContent = text;
         return button;
-    }
-
-    //вспомогательные функци
-    async function sendDataToServer(uri, dataToSend) {
-        const response = await fetch(uri, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(dataToSend),
-        });
-        return response;
     }
 
     //функции событий

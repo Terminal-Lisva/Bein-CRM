@@ -14,7 +14,6 @@ api = Api(app)
 
 #API:
 api.add_resource(Session, f'/{prefix_api}/session') #Вход
-api.add_resource(SessionNew, f'/{prefix_api}/session/new') #Страница автор/рег
 api.add_resource(Users, f'/{prefix_api}/users')
 api.add_resource(UsersPassword, f'/{prefix_api}/users/password')
 api.add_resource(
@@ -30,5 +29,6 @@ api.add_resource(CodeDoc, f'/{prefix_api}/docs/code/<int:id_code_doc>')
 api.add_resource(AllDocs, f'/{prefix_api}/docs/')
 
 #PAGES:
+api.add_resource(SessionNew, '/') #Страница авторизации и регистрации
 api.add_resource(App, '/app')
 api.add_resource(Account, '/app/account')

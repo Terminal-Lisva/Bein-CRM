@@ -1,10 +1,12 @@
 //функции для отправки данных на сервер
-async function sendDeleteRequest(uri) {
+async function sendDataToServer(uri, method, dataToSend = "") {
     const response = await fetch(uri, {
-        method: "DELETE",
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
     });
     return response;
 }
 
 //экспорт
-export { sendDeleteRequest };
+export { sendDataToServer };

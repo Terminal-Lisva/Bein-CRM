@@ -66,25 +66,6 @@ class HandlerRequestWithAuthentication(ABC):
 		return True
 
 
-class HandlerRequestWithCheckID(HandlerRequestWithAuthentication, ABC):
-	"""Обработчик запроса с проверкой ID"""
-
-	def __init__(self):
-		super().__init__()
-
-	def _check_user_id(self, user_id: int) -> bool:
-		"""Проверяет аутентификацию пользователя.
-		Сверяет входную ID пользователя с ID из аутентификации."""
-		if not self._check_authentication_user():
-			return False
-		elif user_id != self._authentication_user.user_id:
-			self._set_error_in_handler_result(
-				source="",
-				error=Errors.NO_PERMISSION_RESOURCE
-			)
-		return True
-
-
 class HandlerError(Exception):
 	pass
 
@@ -319,7 +300,7 @@ class HandlerRequestDelData(HandlerRequestWithAuthentication, ABC):
 		if not self._check_authentication_user():
 			return self._handler_result
 		try:
-			self._make_appeal_db()
+			self._make_appeal_to_db()
 		except HandlerError:
 			return self._handler_result
 		self._handler_result.document = {}
@@ -338,6 +319,6 @@ class HandlerRequestDelData(HandlerRequestWithAuthentication, ABC):
 		return orm_model
 
 	@abstractmethod
-	def _make_appeal_db(self) -> None:
+	def _make_appeal_to_db(self) -> None:
 		"""Делает обращение к БД."""
 		raise NotImplementedError()

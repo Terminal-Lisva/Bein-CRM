@@ -128,7 +128,7 @@ class HandlerRequestDelCodeDoc(HandlerRequestDelData):
     def __init__(self, id_code_doc):
         super().__init__(id_code_doc, cls_orm_model=CodeDoc)
 
-    def _make_appeal_db(self) -> None:
+    def _make_appeal_to_db(self) -> None:
         """Делает обращение к БД."""
         self._check_code_doc()
         db_docs.del_code_doc(self._id)
