@@ -4,7 +4,7 @@ from controller import common
 from controller.service_layer.authentication_info import UserAuthenticationInfo
 from typing import Any
 from database import db_app_interface
-from database.models.user import Users
+from database.models.user import User
 
 
 #Логика получения HTML страницы:
@@ -20,7 +20,7 @@ class ConstructorPageTemplate(ABC):
     def creates(
         self,
         user_id: int,
-        supplement: dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: dict[str, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу."""
         raise NotImplementedError()
 
@@ -34,11 +34,11 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
     def creates(
         self,
         user_id: int,
-        supplement: dict[Any, Any]) -> flaskTyping.ResponseReturnValue:
+        supplement: dict[str, Any]) -> flaskTyping.ResponseReturnValue:
         """Создает страницу с боковым меню.
         У пользователей разная видимость бокового меню."""
-        side_menu_data = self.__get_tree_side_menu_data(user_id)
-        title_data = self.__get_title_data(user_id)
+        side_menu_data = self._get_tree_side_menu_data(user_id)
+        title_data = self._get_title_data(user_id)
         page = common.template_response(
             self._template,
             data = {
@@ -49,7 +49,7 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         )
         return page
 
-    def __get_tree_side_menu_data(self, user_id: int) -> list[dict]:
+    def _get_tree_side_menu_data(self, user_id: int) -> list[dict]:
         """Получает дерево данных бокового меню пользователя."""
         side_menu_data = db_app_interface.get_side_menu_data(user_id)
         tree_side_menu_data: list = []
@@ -69,9 +69,9 @@ class ConstructorPageTemplateWithSideMenu(ConstructorPageTemplate):
         creates_tree(l=tree_side_menu_data, parent_id=0)
         return tree_side_menu_data
 
-    def __get_title_data(self, user_id: int) -> dict[str, str]:
+    def _get_title_data(self, user_id: int) -> dict[str, str]:
         """Получает данные необходимые для построения заголовка."""
-        user = Users.query.get(user_id)
+        user = User.query.get(user_id)
         return {
             "email": user.email,
             "last_name": user.last_name
